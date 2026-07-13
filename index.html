@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Studio — zero-cost prompt agents in your browser</title>
+<meta name="description" content="A prompt recommendation framework and live AI agents that run entirely in your browser. No server, no API keys, no cost — heuristic engine everywhere, Hermes-3 via WebGPU when you opt in.">
+<meta property="og:title" content="Prompt Studio — zero-cost prompt agents">
+<meta property="og:description" content="Type a few words, get a measurably stronger prompt. Agents run client-side: $0 forever, nothing leaves your machine.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">Prompt Studio<span class="dot"> ✦</span></span>
+    <div class="links">
+      <a href="#" data-nav="studio">Studio</a>
+      <a href="#" data-nav="agents">Agents</a>
+      <a href="#" data-nav="library">Library</a>
+      <a href="#" data-nav="how">How it's $0</a>
+      <a href="https://sugeerth.github.io" target="_blank" rel="noopener">sugeerth.github.io ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Prompt recommendation framework · agents deployed at zero cost</div>
+    <h1>Type a few words. Get a measurably better prompt.</h1>
+    <p class="sub">A live prompt engine and three AI agents that run <strong>entirely in your browser</strong> — no server, no API keys, no cost, ever. The heuristic engine works instantly everywhere; opt in to <strong>Hermes-3 on WebGPU</strong> for full LLM-powered agents.</p>
+    <div class="hero-meta">
+      <span class="pill"><b>$0</b> infrastructure, forever</span>
+      <span class="pill"><b>7-dimension</b> prompt rubric</span>
+      <span class="pill"><b>3 agents</b> with live traces</span>
+      <span class="pill">nothing leaves your machine</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="studio">Studio</button>
+    <button class="tab" data-tab="agents">Agents</button>
+    <button class="tab" data-tab="library">Library</button>
+    <button class="tab" data-tab="how">How it's $0</button>
+  </div>
+
+  <!-- ================= STUDIO ================= -->
+  <section class="pane active" id="pane-studio">
+    <div class="studio">
+      <div class="card">
+        <h3>Your draft</h3>
+        <textarea id="draft" placeholder="e.g. write a function that dedupes a list…" spellcheck="false"></textarea>
+        <div class="hint">The engine scores as you type. Chips below are predicted continuations — click to append.</div>
+        <div class="chips" id="predict-chips"></div>
+      </div>
+      <div class="card">
+        <h3>Live score</h3>
+        <div class="intent-row">
+          <span class="intent-label">intent</span>
+          <span class="intent-val" id="intent-val">—</span>
+          <span class="grade" id="grade">–</span>
+        </div>
+        <div id="dims"></div>
+      </div>
+    </div>
+
+    <div class="card reco" id="reco-card" hidden>
+      <h3>Recommended prompt <span style="text-transform:none;letter-spacing:0;color:var(--faint)">· added lines highlighted</span></h3>
+      <pre id="reco-pre"></pre>
+      <div class="reco-actions">
+        <button class="primary" id="copy-reco">Copy improved prompt</button>
+        <button class="quiet" id="send-smith">Refine further with Hermes Prompt Smith →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= AGENTS ================= -->
+  <section class="pane" id="pane-agents">
+    <div class="model-bar card" style="padding:14px 16px">
+      <select id="model-select">
+        <option value="">Heuristic engine (instant, no download)</option>
+        <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5-0.5B — fast tier (~350 MB)</option>
+        <option value="Hermes-3-Llama-3.2-3B-q4f16_1-MLC">Hermes-3 3B — agent tier (~1.8 GB)</option>
+        <option value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC">Hermes-3 8B — full tier (~4.6 GB)</option>
+      </select>
+      <button class="quiet" id="load-model">Load model</button>
+      <div class="progress" hidden id="model-progress"><i></i></div>
+      <span class="model-status" id="model-status">heuristic mode — works on every device</span>
+    </div>
+
+    <div class="agent-grid" id="agent-grid"></div>
+
+    <div class="card trace" id="trace-card" hidden>
+      <h3 id="trace-title">Agent trace</h3>
+      <div id="trace-rows"></div>
+    </div>
+  </section>
+
+  <!-- ================= LIBRARY ================= -->
+  <section class="pane" id="pane-library">
+    <div class="lib-grid" id="lib-grid"></div>
+  </section>
+
+  <!-- ================= HOW ================= -->
+  <section class="pane how" id="pane-how">
+    <div class="card">
+      <h3>Zero-cost architecture</h3>
+      <p style="color:var(--muted);font-size:15px">Most "AI platform" demos die when the free credits run out. This one can't — there is nothing to pay for.</p>
+      <ol>
+        <li><strong>Static hosting on GitHub Pages.</strong> The whole platform is HTML/CSS/JS. No server, no database, no cold starts, no bill.</li>
+        <li><strong>The heuristic engine is pure JavaScript.</strong> Intent detection, the 7-dimension rubric, the rewriter, and the prompt library run in ~15 KB of code, instantly, on any device — including phones with no WebGPU.</li>
+        <li><strong>LLM inference runs on <em>your</em> GPU via WebLLM + WebGPU.</strong> Opt in and the browser downloads Hermes-3 (Nous Research) or Qwen2.5 weights once from the Hugging Face CDN, caches them locally, and runs inference on-device. The site owner pays $0; your prompts never leave your machine.</li>
+        <li><strong>Agents are declarative step specs.</strong> Each agent (classify → critique → rewrite → verify) executes client-side with a live trace — the same observability pattern used to debug production agent systems.</li>
+        <li><strong>Pinned dependencies.</strong> WebLLM is pinned to a fixed version on a public CDN, so upstream changes can't silently break the page.</li>
+      </ol>
+      <div class="arch">┌ your browser ──────────────────────────────────────┐
+│  engine.js      intent → rubric → rewrite (pure JS) │
+│  agents.js      3 agents, step runner, live traces  │
+│  webllm 0.2.84  Hermes-3 / Qwen2.5 on WebGPU (opt-in)│
+└──────────────┬──────────────────────────────────────┘
+               │ static files only          $0 / month
+        GitHub Pages ← weights cached from HF CDN (once)</div>
+      <p style="color:var(--muted);font-size:14px;margin-top:18px">Built by <a href="https://sugeerth.github.io" target="_blank" rel="noopener">Sugeerth Murugesan</a> — ML engineer working on agentic systems and LLM evaluation. This page is itself a demo of the thesis: <em>useful agents don't need expensive infrastructure — they need good scaffolding and verification.</em></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Sugeerth Murugesan</span>
+    <a href="https://sugeerth.github.io" target="_blank" rel="noopener">home</a>
+    <a href="https://github.com/sugeerth" target="_blank" rel="noopener">github</a>
+    <span style="margin-left:auto">no analytics · no cookies · no data leaves your browser</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast">Copied ✓</div>
+
+<script type="module">
+import { detectIntent, scorePrompt, recommend, recommendText, predict, LIBRARY } from "./engine.js";
+import { AGENTS, runAgent, backend } from "./agents.js";
+
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* ---- tabs ---- */
+function showTab(id) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === id));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === "pane-" + id));
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showTab(t.dataset.tab)));
+document.querySelectorAll("[data-nav]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); showTab(a.dataset.nav); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+
+/* ---- studio ---- */
+const draft = $("#draft");
+let debounceT;
+draft.addEventListener("input", () => { clearTimeout(debounceT); debounceT = setTimeout(update, 160); });
+
+function update() {
+  const text = draft.value;
+  const recoCard = $("#reco-card");
+  if (text.trim().length < 3) {
+    $("#intent-val").textContent = "—";
+    $("#grade").textContent = "–";
+    $("#grade").className = "grade";
+    $("#dims").innerHTML = "";
+    $("#predict-chips").innerHTML = "";
+    recoCard.hidden = true;
+    return;
+  }
+  const intent = detectIntent(text);
+  const scored = scorePrompt(text);
+
+  $("#intent-val").textContent = intent.label;
+  const g = $("#grade");
+  g.textContent = scored.grade + " · " + scored.overall;
+  g.className = "grade " + (scored.overall >= 70 ? "g-good" : scored.overall >= 45 ? "g-warn" : "g-bad");
+
+  $("#dims").innerHTML = scored.dims.map(d => {
+    const cls = d.score >= 70 ? "high" : d.score >= 40 ? "mid" : "low";
+    const fix = d.score < 50 ? `<div class="dim-fix">→ ${esc(d.advice)}</div>` : "";
+    return `<div class="dim"><div class="dim-head"><span class="dim-name">${d.name}</span><span class="dim-score">${d.score}</span></div><div class="bar ${cls}"><i style="width:${d.score}%"></i></div>${fix}</div>`;
+  }).join("");
+
+  $("#predict-chips").innerHTML = predict(text, intent)
+    .map(c => `<button class="chip" data-append="${esc(c.slice(1))}">${esc(c)}</button>`).join("");
+
+  const lines = recommend(text, intent, scored);
+  $("#reco-pre").innerHTML = lines.map(l => l.added ? `<span class="added">${esc(l.text)}</span>` : esc(l.text)).join("\n");
+  recoCard.hidden = false;
+  recoCard.dataset.text = recommendText(lines);
+}
+
+$("#predict-chips").addEventListener("click", e => {
+  const chip = e.target.closest("[data-append]");
+  if (!chip) return;
+  draft.value = draft.value.replace(/\s+$/, "") + ", " + chip.dataset.append.trim();
+  draft.focus();
+  update();
+});
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+$("#copy-reco").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#reco-card").dataset.text || "");
+  toast("Copied ✓");
+});
+$("#send-smith").addEventListener("click", () => { showTab("agents"); launchAgent(AGENTS[0]); });
+
+/* ---- agents ---- */
+const grid = $("#agent-grid");
+grid.innerHTML = AGENTS.map(a => `
+  <div class="card agent-card">
+    <div class="role">${a.role}</div>
+    <h4>${a.name}</h4>
+    <p>${a.blurb}</p>
+    <div class="steps-preview">${a.steps.join(" → ")}</div>
+    <button class="primary" data-run="${a.id}">Run on my draft</button>
+  </div>`).join("");
+
+let running = false;
+async function launchAgent(agent) {
+  if (running) return;
+  const text = draft.value.trim() || "write a function that dedupes a list";
+  running = true;
+  document.querySelectorAll("[data-run]").forEach(b => b.disabled = true);
+
+  const card = $("#trace-card");
+  const rows = $("#trace-rows");
+  card.hidden = false;
+  $("#trace-title").textContent = `${agent.name} — live trace (${backend.modelLabel || "heuristic mode"})`;
+  rows.innerHTML = "";
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  const rowEls = {};
+  try {
+    await runAgent(agent, text, ev => {
+      if (ev.status === "run") {
+        const el = document.createElement("div");
+        el.className = "trace-row";
+        el.innerHTML = `<span class="t-status run">●</span><span class="t-name">${esc(ev.step)}</span><span class="t-out">…</span><span class="t-ms"></span>`;
+        rows.appendChild(el);
+        rowEls[ev.step] = el;
+      } else {
+        const el = rowEls[ev.step];
+        if (!el) return;
+        el.querySelector(".t-status").className = "t-status ok";
+        el.querySelector(".t-status").textContent = "✓";
+        el.querySelector(".t-out").innerHTML = `<span class="mono">${esc(ev.output)}</span>` + (ev.via && ev.via !== "heuristic" ? ` <span style="color:var(--accent);font-size:11px">via ${esc(ev.via)}</span>` : "");
+        el.querySelector(".t-ms").textContent = ev.ms + "ms";
+      }
+    });
+  } catch (err) {
+    rows.insertAdjacentHTML("beforeend", `<div class="trace-row"><span class="t-status" style="color:var(--bad)">✗</span><span class="t-name">error</span><span class="t-out">${esc(String(err))}</span></div>`);
+  }
+  running = false;
+  document.querySelectorAll("[data-run]").forEach(b => b.disabled = false);
+}
+grid.addEventListener("click", e => {
+  const btn = e.target.closest("[data-run]");
+  if (btn) launchAgent(AGENTS.find(a => a.id === btn.dataset.run));
+});
+
+/* ---- WebLLM loader (opt-in, $0: weights cached in-browser, inference on-device) ---- */
+$("#load-model").addEventListener("click", async () => {
+  const modelId = $("#model-select").value;
+  const status = $("#model-status");
+  if (!modelId) {
+    backend.llmCall = null; backend.modelLabel = null;
+    status.textContent = "heuristic mode — works on every device";
+    status.className = "model-status";
+    return;
+  }
+  if (!("gpu" in navigator)) {
+    status.textContent = "WebGPU not available in this browser — staying in heuristic mode (everything still works)";
+    return;
+  }
+  const btn = $("#load-model");
+  const prog = $("#model-progress");
+  btn.disabled = true;
+  prog.hidden = false;
+  status.textContent = "loading… (downloads once, then cached)";
+  try {
+    const webllm = await import("https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.84/+esm");
+    const engine = await webllm.CreateMLCEngine(modelId, {
+      initProgressCallback: p => {
+        prog.querySelector("i").style.width = Math.round((p.progress || 0) * 100) + "%";
+        status.textContent = p.text?.slice(0, 80) || "loading…";
+      },
+    });
+    backend.modelLabel = modelId.split("-q4")[0];
+    backend.llmCall = async (system, user) => {
+      const res = await engine.chat.completions.create({
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        temperature: 0.6,
+        max_tokens: 600,
+      });
+      return res.choices[0]?.message?.content || "";
+    };
+    status.textContent = `✓ ${backend.modelLabel} ready — agents now LLM-powered, on your GPU`;
+    status.className = "model-status ready";
+  } catch (err) {
+    status.textContent = "model load failed (" + String(err).slice(0, 60) + "…) — heuristic mode still fully functional";
+  }
+  btn.disabled = false;
+  prog.hidden = true;
+});
+
+/* ---- library ---- */
+$("#lib-grid").innerHTML = LIBRARY.map((item, i) => `
+  <div class="card lib-card" data-lib="${i}" title="Click to open in Studio">
+    <div class="tag">${item.intent}</div>
+    <h4>${esc(item.title)}</h4>
+    <p>${esc(item.prompt)}</p>
+  </div>`).join("");
+$("#lib-grid").addEventListener("click", e => {
+  const card = e.target.closest("[data-lib]");
+  if (!card) return;
+  draft.value = LIBRARY[+card.dataset.lib].prompt;
+  showTab("studio");
+  update();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  toast("Loaded into Studio");
+});
+
+/* seed with an example so the page is alive on first paint */
+draft.value = "write a blog post about my project";
+update();
+</script>
+</body>
+</html>
