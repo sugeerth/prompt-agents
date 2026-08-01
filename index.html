@@ -74,6 +74,17 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .slider label{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:4px}
 .slider label output{color:var(--ink); font-weight:600}
 input[type=range]{width:100%; accent-color:var(--accent)}
+.drillwrap{min-width:170px; flex:0 1 auto}
+.switch{
+  display:block; width:44px; height:24px; border-radius:999px; border:1px solid var(--line);
+  background:var(--chip); cursor:pointer; position:relative; padding:0; transition:background .15s;
+}
+.switch::after{
+  content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+  background:var(--panel); box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s;
+}
+.switch.on{background:var(--accent); border-color:var(--accent)}
+.switch.on::after{left:22px}
 
 /* ---- prompt card ---- */
 #card{
@@ -84,6 +95,8 @@ input[type=range]{width:100%; accent-color:var(--accent)}
   padding:20px; font-size:16.5px; line-height:1.65; min-height:76px; white-space:pre-wrap; word-break:break-word;
 }
 #prompt .adds{color:var(--add)}
+#prompt .seg{cursor:pointer; border-radius:4px}
+#prompt .seg:hover{background:var(--chip); text-decoration:underline dashed; text-underline-offset:3px}
 #prompt.empty{color:var(--muted)}
 .actions{
   display:flex; gap:10px; flex-wrap:wrap; align-items:center;
@@ -115,7 +128,7 @@ footer a{color:var(--accent)}
 <body>
 <main>
   <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
-  <p class="sub">Start typing anything. A short, sharp prompt builds itself — copy it, or launch it straight into your AI.</p>
+  <p class="sub">Start typing anything. A short, sharp prompt builds itself — click any part of it to change it, then copy or launch. Answers come back tight, with numbered ways to go deeper.</p>
 
   <div class="inputwrap">
     <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -134,6 +147,11 @@ footer a{color:var(--accent)}
     <div class="slider">
       <label><span>Audience</span><output id="toneOut">Anyone</output></label>
       <input type="range" id="tone" min="0" max="2" step="1" value="1">
+    </div>
+    <div class="slider drillwrap">
+      <label><span>Go-deeper menu</span><output id="drillOut">On</output></label>
+      <button id="drill" class="switch on" type="button" aria-pressed="true"
+              title="Tight answer first, then 3 numbered drill-downs you pick from"></button>
     </div>
   </div>
 

@@ -23,6 +23,13 @@ Users have no attention span — neither should prompts.
   domain float to the front.
 - **Two sliders.** Depth (TL;DR ↔ Deep) and Audience (Beginner ↔ Expert) reshape
   the prompt live.
+- **Go-deeper menu (details on demand).** By default every prompt ends with
+  "End with 3 numbered one-line ways to go deeper; I'll pick by number." — the
+  model answers in a few highly relevant sentences, then offers drill-downs you
+  invoke by replying with a number. Succinct understanding first, depth on demand.
+- **The prompt is the control surface.** Click any piece of the generated prompt
+  to edit it in place: click a modifier to remove it, click the answer-shape
+  sentence to cycle depth, click the audience line to clear it.
 - **One-tap launch.** Copy with ⏎, or open ChatGPT / Claude / Perplexity with the
   prompt pre-filled (Gemini: copied + opened).
 
