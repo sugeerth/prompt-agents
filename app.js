@@ -84,7 +84,7 @@ const DOMAINS = {
     "Your pick in one sentence, with the reason.",
     "Compare the options in a small table, then your pick in 2 sentences. If it depends, tell me the one deciding question.",
     "Compare in a table (option, best for, biggest risk), your pick with reasoning, and the deciding question if it depends." ]},
-  summarize: { em:"📝", label:"Summarize", base:t=>`Summarize this: ${t}.`, shapes:[
+  summarize: { em:"📝", label:"Summarize", base:t=>`Summarize: ${t}.`, shapes:[
     "One-sentence bottom line only.\n\n[paste text below]",
     "5 bullets max, under 15 words each, keep numbers exact, then \"Bottom line:\" in one sentence.\n\n[paste text below]",
     "Key points grouped by theme, numbers exact, then \"Bottom line:\" and one thing the author underplays.\n\n[paste text below]" ]},
@@ -107,7 +107,7 @@ const SIGS = [
   ["debug",   /\b(error|bug|traceback|exception|not working|fails?|crash|undefined|stack ?trace)\b/i],
   ["code",    /\b(code|function|script|python|javascript|typescript|sql|regex|api|refactor|algorithm|component)\b/i],
   ["email",   /\b(email|e-mail|reply to|follow ?up)\b/i],
-  ["summarize",/\b(summar|tl;?dr|key points|recap|condense)\b/i],
+  ["summarize",/\b(summariz|summary|tl;?dr|key points|recap|condense)/i],
   ["cook",    /\b(recipe|cook|bake|dinner|meal|marinade|air fryer|slow cooker)\b/i],
   ["travel",  /\b(trip|itinerary|travel|vacation|days? in|visit)\b/i],
   ["money",   /\b(invest|budget|salary|mortgage|loan|savings?|retire|tax|debt|401k|credit)\b/i],
@@ -357,6 +357,11 @@ $("tone").addEventListener("input", e => { state.tone = +e.target.value; $("tone
 $("vocabnote").textContent = VOCAB.length ? VOCAB.length + " starter ideas built in." : "";
 renderChips(); update();
 
-/* deep link: #t=<topic> */
-const hash = new URLSearchParams(location.hash.slice(1));
-if (hash.get("t")) { q.value = hash.get("t"); q.dispatchEvent(new Event("input")); }
+/* deep link: #t=<topic>, applied on load and on hash change */
+function applyHash() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const t = hash.get("t");
+  if (t) { q.value = t; q.dispatchEvent(new Event("input")); state.matches = []; renderSug(); }
+}
+window.addEventListener("hashchange", applyHash);
+applyHash();
