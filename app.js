@@ -159,8 +159,13 @@ function shapeFor(dom, depth) {
   return depth === 2 ? std + " Then go one level deeper on the most important part." : std;
 }
 
-/* Build the prompt as segments so chip/slider additions can be highlighted. */
-function buildPrompt(topic, domId, depth, tone, activeMods) {
+/* One line that turns every answer into progressive disclosure:
+   tight reply first, numbered drill-downs the user can pick from. */
+const DRILL = "End with 3 numbered one-line ways to go deeper; I'll pick by number.";
+
+/* Build the prompt as typed segments — every piece knows what produced it,
+   so the rendered prompt can be edited by clicking the piece itself. */
+function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   const dom = DOMAINS[domId] || DOMAINS.general;
   let t = topic.trim().replace(/\s+/g, " ").replace(/[.?!]+$/, "");
   if (STRIPS[domId]) {
@@ -168,16 +173,17 @@ function buildPrompt(topic, domId, depth, tone, activeMods) {
     if (stripped.trim()) t = stripped.trim();
   }
   if (!t) return [];
-  const segs = [{ text: dom.base(t), add: false }];
+  const segs = [{ text: dom.base(t), add: false, kind: "base" }];
   const shape = shapeFor(dom, depth);
   // keep [paste text below] marker at the very end
   const marker = shape.includes("\n\n[paste text below]");
   const shapeCore = marker ? shape.replace("\n\n[paste text below]", "") : shape;
-  segs.push({ text: shapeCore, add: depth !== 1 });
-  if (depth === 0) segs.push({ text: "No preamble.", add: true });
-  if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true });
-  for (const m of activeMods) segs.push({ text: m.text, add: true });
-  if (marker) segs.push({ text: "\n[paste text below]", add: false });
+  segs.push({ text: shapeCore, add: depth !== 1, kind: "shape" });
+  if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
+  if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
+  for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+  if (drill && domId !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
+  if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
   return segs;
 }
 
@@ -188,7 +194,7 @@ const VOCAB = (window.PS_VOCAB || []);
 const MODIFIERS = (window.PS_MODS || []);
 
 /* ---------- state ---------- */
-const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [] };
+const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [], drill: true };
 
 /* ---------- elements ---------- */
 const $ = id => document.getElementById(id);
@@ -259,24 +265,47 @@ chipsEl.addEventListener("click", e => {
 function currentSegs() {
   const domId = state.domain || detectDomain(state.topic);
   const active = MODIFIERS.filter(m => state.mods.has(m.id));
-  return buildPrompt(state.topic, domId, state.depth, state.tone, active);
+  return buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
 }
+
+const SEG_HINTS = {
+  shape: "Click to change depth",
+  aud: "Click to remove",
+  mod: "Click to remove",
+  drill: "Click to remove the go-deeper menu",
+};
 
 function update() {
   const segs = currentSegs();
   if (!segs.length) {
     promptEl.className = "empty";
-    promptEl.textContent = "Your prompt appears here as you type — short, specific, ready to paste.";
+    promptEl.textContent = "Your prompt appears here as you type — short, specific, ready to paste. Click any part of it to change or remove that part.";
     countEl.textContent = "";
     return;
   }
   promptEl.className = "";
-  promptEl.innerHTML = segs.map(s =>
-    `<span class="${s.add ? "adds" : ""}">${s.text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>`
-  ).join(" ");
+  promptEl.innerHTML = segs.map((s, i) => {
+    const hint = SEG_HINTS[s.kind];
+    const cls = (s.add ? "adds" : "") + (hint ? " seg" : "");
+    const attrs = hint ? ` data-i="${i}" title="${hint}"` : "";
+    return `<span class="${cls.trim()}"${attrs}>${s.text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>`;
+  }).join(" ");
   const text = segsToText(segs);
   countEl.textContent = text.split(/\s+/).length + " words";
 }
+
+/* the prompt itself is the control surface: click a piece to edit it */
+promptEl.addEventListener("click", e => {
+  const span = e.target.closest(".seg");
+  if (!span) return;
+  const seg = currentSegs()[+span.dataset.i];
+  if (!seg) return;
+  if (seg.kind === "mod") { state.mods.delete(seg.modId); renderChips(); }
+  else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; $("toneOut").textContent = toneLabels[1]; }
+  else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); $("depthOut").textContent = depthLabels[state.depth]; }
+  else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
+  update();
+});
 
 /* ---------- copy + launch ---------- */
 function copyPrompt(silent) {
@@ -352,6 +381,16 @@ const depthLabels = ["TL;DR", "Standard", "Deep"];
 const toneLabels = ["Beginner", "Anyone", "Expert"];
 $("depth").addEventListener("input", e => { state.depth = +e.target.value; $("depthOut").textContent = depthLabels[state.depth]; update(); });
 $("tone").addEventListener("input", e => { state.tone = +e.target.value; $("toneOut").textContent = toneLabels[state.tone]; update(); });
+
+/* details-on-demand toggle */
+function syncDrillUI() {
+  const b = $("drill");
+  b.classList.toggle("on", state.drill);
+  b.setAttribute("aria-pressed", String(state.drill));
+  $("drillOut").textContent = state.drill ? "On" : "Off";
+}
+$("drill").addEventListener("click", () => { state.drill = !state.drill; syncDrillUI(); update(); });
+syncDrillUI();
 
 /* ---------- init ---------- */
 $("vocabnote").textContent = VOCAB.length ? VOCAB.length + " starter ideas built in." : "";
