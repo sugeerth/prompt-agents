@@ -233,14 +233,20 @@ const SIM = (() => {
     d.norm = Math.sqrt([...d.vec.values()].reduce((s, x) => s + x * x, 0)) || 1;
     d.tris = trigrams(d.t);
   }
-  return { docs, idf };
+  return { docs, idf, df };
 })();
 
 function embedQuery(text) {
   const toks = tokenize(text);
+  // a final token the corpus has never seen and that isn't followed by a space
+  // is still being typed — treat it as a prefix, not a full token, so
+  // "japan itin" matches "7 day japan itinerary"
+  let part = null;
+  if (!/\s$/.test(text) && toks.length > 1 && !SIM.df.has(toks[toks.length - 1]))
+    part = toks.pop();
   const vec = new Map(toks.map(tok => [tok, SIM.idf(tok)]));
   const norm = Math.sqrt([...vec.values()].reduce((s, x) => s + x * x, 0)) || 1;
-  return { vec, norm, tris: trigrams(text) };
+  return { vec, norm, tris: trigrams(text), part };
 }
 
 function score(qEmb, d) {
@@ -250,7 +256,9 @@ function score(qEmb, d) {
   let inter = 0;
   for (const t of qEmb.tris) if (d.tris.has(t)) inter++;
   const jac = inter / (qEmb.tris.size + d.tris.size - inter || 1);
-  return 0.7 * cos + 0.3 * jac;
+  let s = 0.7 * cos + 0.3 * jac;
+  if (qEmb.part && d.toks.some(t => t.startsWith(qEmb.part))) s += 0.2;
+  return s;
 }
 
 /* ---------- state ---------- */
