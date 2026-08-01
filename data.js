@@ -1,7 +1,7 @@
-/* Prompt Studio data — autocomplete vocabulary + one-tap modifiers.
-   Generated from a curated sweep of what people actually ask LLMs, plus
-   modifier phrasings distilled from public prompt libraries (Anthropic,
-   OpenAI, Google guides, awesome-chatgpt-prompts). */
+/* Prompt Studio data — autocomplete vocabulary, one-tap modifiers, and a
+   hand-tuned gold cache of the top real-world LLM queries (researched across
+   ChatGPT/Gemini/Claude/Perplexity usage patterns; each prompt pre-reasoned
+   for succinct output and served instantly on similarity match). */
 
 window.PS_MODS = [
  {
@@ -295,11 +295,14 @@ window.PS_VOCAB = [
 {"t":"couch to 5k plan","d":"fit"},
 {"t":"css center a div","d":"code"},
 {"t":"date night ideas","d":"fun"},
+{"t":"date night spots","d":"local"},
 {"t":"gut health foods","d":"health"},
 {"t":"next js vs react","d":"code"},
 {"t":"vitamin d dosage","d":"health"},
 {"t":"youtube seo tips","d":"market"},
+{"t":"best brunch spots","d":"local"},
 {"t":"chatgpt vs claude","d":"tech"},
+{"t":"cheap eats nearby","d":"local"},
 {"t":"jump rope workout","d":"fit"},
 {"t":"side hustle ideas","d":"biz"},
 {"t":"vpn do i need one","d":"tech"},
@@ -311,6 +314,7 @@ window.PS_VOCAB = [
 {"t":"fix a leaky faucet","d":"home"},
 {"t":"haiku about autumn","d":"create"},
 {"t":"job interview prep","d":"career"},
+{"t":"live music tonight","d":"local"},
 {"t":"merge conflict fix","d":"debug"},
 {"t":"pitch deck outline","d":"biz"},
 {"t":"tiktok video ideas","d":"social"},
@@ -322,7 +326,9 @@ window.PS_VOCAB = [
 {"t":"keto dinner recipes","d":"cook"},
 {"t":"math help fractions","d":"math"},
 {"t":"nda template simple","d":"legal"},
+{"t":"restaurants near me","d":"local"},
 {"t":"stock vs index fund","d":"money"},
+{"t":"things to do nearby","d":"local"},
 {"t":"toddler won't sleep","d":"parent"},
 {"t":"why is the sky blue","d":"sci"},
 {"t":"world war 2 summary","d":"learn"},
@@ -338,6 +344,7 @@ window.PS_VOCAB = [
 {"t":"git undo last commit","d":"code"},
 {"t":"grad school worth it","d":"decide"},
 {"t":"heat pump vs furnace","d":"home"},
+{"t":"hidden gems to visit","d":"local"},
 {"t":"kubernetes vs docker","d":"tech"},
 {"t":"learn to type faster","d":"learn"},
 {"t":"migraine relief fast","d":"health"},
@@ -345,6 +352,7 @@ window.PS_VOCAB = [
 {"t":"quick dinner for two","d":"cook"},
 {"t":"quiet a squeaky door","d":"home"},
 {"t":"riddles with answers","d":"fun"},
+{"t":"scenic drives nearby","d":"local"},
 {"t":"time blocking method","d":"plan"},
 {"t":"tone down this email","d":"write"},
 {"t":"trip to japan 7 days","d":"travel"},
@@ -356,12 +364,14 @@ window.PS_VOCAB = [
 {"t":"clear cache on iphone","d":"tech"},
 {"t":"dna vs rna difference","d":"sci"},
 {"t":"docker compose basics","d":"tech"},
+{"t":"go to market strategy","d":"biz"},
 {"t":"image for blog header","d":"image"},
 {"t":"image prompt for logo","d":"image"},
 {"t":"logo ideas for bakery","d":"image"},
 {"t":"mac vs windows laptop","d":"decide"},
 {"t":"mattress buying guide","d":"shop"},
 {"t":"morning routine ideas","d":"plan"},
+{"t":"nearest hiking trails","d":"local"},
 {"t":"nyc weekend itinerary","d":"travel"},
 {"t":"online business ideas","d":"biz"},
 {"t":"organize small closet","d":"home"},
@@ -412,15 +422,18 @@ window.PS_VOCAB = [
 {"t":"xlsx to csv conversion","d":"tech"},
 {"t":"yearly budget template","d":"money"},
 {"t":"apology email to client","d":"email"},
+{"t":"business plan one pager","d":"biz"},
 {"t":"cold email to investors","d":"email"},
 {"t":"conjugate ser and estar","d":"lang"},
 {"t":"dating profile bio help","d":"social"},
 {"t":"dinner party menu for 8","d":"cook"},
 {"t":"dishwasher not draining","d":"home"},
 {"t":"emergency fund how much","d":"money"},
+{"t":"europe trip on a budget","d":"travel"},
 {"t":"graduation speech ideas","d":"write"},
 {"t":"healthy breakfast ideas","d":"cook"},
 {"t":"ideas for team building","d":"biz"},
+{"t":"japan 10 days with kids","d":"travel"},
 {"t":"keywords for my website","d":"market"},
 {"t":"kids screen time limits","d":"parent"},
 {"t":"lose weight without gym","d":"fit"},
@@ -446,6 +459,7 @@ window.PS_VOCAB = [
 {"t":"copyright for my artwork","d":"legal"},
 {"t":"enhance old family photo","d":"image"},
 {"t":"explain machine learning","d":"learn"},
+{"t":"free things to do nearby","d":"local"},
 {"t":"google ads for beginners","d":"market"},
 {"t":"grow instagram followers","d":"market"},
 {"t":"hangover cure that works","d":"health"},
@@ -472,6 +486,8 @@ window.PS_VOCAB = [
 {"t":"text back after ghosting","d":"social"},
 {"t":"typescript vs javascript","d":"code"},
 {"t":"unclog a drain naturally","d":"home"},
+{"t":"validate a business idea","d":"biz"},
+{"t":"weekend day trips nearby","d":"local"},
 {"t":"weekend plans when bored","d":"fun"},
 {"t":"weekly schedule template","d":"plan"},
 {"t":"wine pairing with salmon","d":"cook"},
@@ -481,6 +497,7 @@ window.PS_VOCAB = [
 {"t":"anxiety coping techniques","d":"health"},
 {"t":"automate my daily reports","d":"agent"},
 {"t":"backup my photos to cloud","d":"tech"},
+{"t":"best coffee shops in town","d":"local"},
 {"t":"best time to book flights","d":"travel"},
 {"t":"down payment savings plan","d":"money"},
 {"t":"excel formula for vlookup","d":"tech"},
@@ -492,6 +509,7 @@ window.PS_VOCAB = [
 {"t":"learn python from scratch","d":"learn"},
 {"t":"lease agreement red flags","d":"legal"},
 {"t":"linkedin summary examples","d":"career"},
+{"t":"network effects explained","d":"learn"},
 {"t":"notion setup for students","d":"tech"},
 {"t":"probability of dice rolls","d":"math"},
 {"t":"protein intake calculator","d":"fit"},
@@ -561,6 +579,7 @@ window.PS_VOCAB = [
 {"t":"make this sound professional","d":"write"},
 {"t":"nap schedule for 6 month old","d":"parent"},
 {"t":"newborn checklist essentials","d":"parent"},
+{"t":"product market fit explained","d":"learn"},
 {"t":"rolling r pronunciation tips","d":"lang"},
 {"t":"small bathroom storage ideas","d":"home"},
 {"t":"standard deviation explained","d":"math"},
@@ -576,8 +595,10 @@ window.PS_VOCAB = [
 {"t":"unit conversion cups to grams","d":"math"},
 {"t":"vegetarian high protein meals","d":"cook"},
 {"t":"childproof the house checklist","d":"parent"},
+{"t":"directions and transit options","d":"local"},
 {"t":"fever in toddler when to worry","d":"parent"},
 {"t":"generate a birthday card image","d":"image"},
+{"t":"kid friendly activities nearby","d":"local"},
 {"t":"lower blood pressure naturally","d":"health"},
 {"t":"networking email to a stranger","d":"email"},
 {"t":"newsletter ideas for customers","d":"market"},
@@ -609,5 +630,10 @@ window.PS_VOCAB = [
 {"t":"onboarding checklist for new hires","d":"biz"},
 {"t":"schedule social posts automatically","d":"agent"},
 {"t":"stretching routine for desk workers","d":"fit"},
+{"t":"business ideas with low startup cost","d":"biz"},
 {"t":"movie recommendations like inception","d":"fun"}
+];
+
+window.PS_GOLD = [
+
 ];

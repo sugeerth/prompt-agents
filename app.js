@@ -80,6 +80,10 @@ const DOMAINS = {
     "Best suggestions, quick and specific. No long intros.", null ]},
   tech:      { em:"📱", label:"Tech help", base:t=>`Tech help: ${t}.`, shapes:[ null,
     "The fix in numbered steps for a non-expert, plus what to check if it doesn't work.", null ]},
+  local:     { em:"📍", label:"Nearby",    base:t=>`Recommend: ${t}.`, shapes:[
+    "Top 3 only — name plus one line each. Ask my location first if you need it.",
+    "Top 5 in a table (name, why it's worth it, cost). Ask my location first if it matters.",
+    "Top 7 in a table (name, why, cost, time needed), grouped by area, plus the one tourist trap to skip. Ask my location first if it matters." ]},
   decide:    { em:"🤔", label:"Decide",    base:t=>`Help me decide: ${t}.`, shapes:[
     "Your pick in one sentence, with the reason.",
     "Compare the options in a small table, then your pick in 2 sentences. If it depends, tell me the one deciding question.",
@@ -109,6 +113,7 @@ const SIGS = [
   ["email",   /\b(email|e-mail|reply to|follow ?up)\b/i],
   ["summarize",/\b(summariz|summary|tl;?dr|key points|recap|condense)/i],
   ["cook",    /\b(recipe|cook|bake|dinner|meal|marinade|air fryer|slow cooker)\b/i],
+  ["local",   /\b(near me|nearby|nearest|closest|around here|in town|directions to|places to (see|eat|visit)|hidden gems|things to do|day trips?)\b/i],
   ["travel",  /\b(trip|itinerary|travel|vacation|days? in|visit)\b/i],
   ["money",   /\b(invest|budget|salary|mortgage|loan|savings?|retire|tax|debt|401k|credit)\b/i],
   ["fit",     /\b(workout|gym|exercise|run(ning)?|strength|cardio|stretch|muscle)\b/i],
@@ -182,6 +187,10 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+  // complex asks: several intents in one line ("10 days japan with kids on a budget")
+  // get one guard line so no stated constraint is dropped
+  if (!state.noMulti && t.split(" ").length >= 6 && SIGS.filter(s => s[1].test(t)).length >= 2)
+    segs.push({ text: "Cover every constraint I stated.", add: true, kind: "multi" });
   if (drill && domId !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
   if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
   return segs;
@@ -192,26 +201,109 @@ const segsToText = segs => segs.map(s => s.text).join(" ").replace(/ \n/g, "\n")
 /* ---------- data ---------- */
 const VOCAB = (window.PS_VOCAB || []);
 const MODIFIERS = (window.PS_MODS || []);
+const GOLD = (window.PS_GOLD || []);
+
+/* ---------- similarity engine ----------
+   Two-tower-style matching in the browser: both the query and every entry are
+   embedded into the same sparse IDF-weighted token space and scored by cosine,
+   blended with character-trigram Jaccard so typos and word-order changes still
+   land. Cheap enough to score every entry on every keystroke. */
+
+const tokenize = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+function trigrams(s) {
+  s = " " + s.toLowerCase() + " ";
+  const out = new Set();
+  for (let i = 0; i < s.length - 2; i++) out.add(s.slice(i, i + 3));
+  return out;
+}
+
+const SIM = (() => {
+  const docs = [];
+  VOCAB.forEach((v, i) => docs.push({ t: v.t, ref: { type: "vocab", i } }));
+  GOLD.forEach((g, i) => docs.push({ t: g.q, ref: { type: "gold", i } }));
+  const df = new Map();
+  for (const d of docs) {
+    d.toks = tokenize(d.t);
+    for (const tok of new Set(d.toks)) df.set(tok, (df.get(tok) || 0) + 1);
+  }
+  const N = docs.length || 1;
+  const idf = tok => Math.log(1 + N / (df.get(tok) || 1));
+  for (const d of docs) {
+    d.vec = new Map(d.toks.map(tok => [tok, idf(tok)]));
+    d.norm = Math.sqrt([...d.vec.values()].reduce((s, x) => s + x * x, 0)) || 1;
+    d.tris = trigrams(d.t);
+  }
+  return { docs, idf };
+})();
+
+function embedQuery(text) {
+  const toks = tokenize(text);
+  const vec = new Map(toks.map(tok => [tok, SIM.idf(tok)]));
+  const norm = Math.sqrt([...vec.values()].reduce((s, x) => s + x * x, 0)) || 1;
+  return { vec, norm, tris: trigrams(text) };
+}
+
+function score(qEmb, d) {
+  let dot = 0;
+  for (const [tok, w] of qEmb.vec) if (d.vec.has(tok)) dot += w * d.vec.get(tok);
+  const cos = dot / (qEmb.norm * d.norm);
+  let inter = 0;
+  for (const t of qEmb.tris) if (d.tris.has(t)) inter++;
+  const jac = inter / (qEmb.tris.size + d.tris.size - inter || 1);
+  return 0.7 * cos + 0.3 * jac;
+}
 
 /* ---------- state ---------- */
-const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [], drill: true };
+const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [], drill: true, gold: null };
 
 /* ---------- elements ---------- */
 const $ = id => document.getElementById(id);
 const q = $("q"), sug = $("sug"), promptEl = $("prompt"), chipsEl = $("chips"),
       countEl = $("count"), toast = $("toast");
 
-/* ---------- suggestions ---------- */
+/* ---------- suggestions ----------
+   Pipeline: gold-cache similarity hits (pinned, ★) → exact prefix →
+   substring → similarity fallback for typos and reworded asks. */
 function findMatches(text) {
   const t = text.trim().toLowerCase();
   if (!t) return [];
+  const qEmb = embedQuery(t);
+
+  const golds = [];
+  if (t.length >= 3) {
+    for (const d of SIM.docs) {
+      if (d.ref.type !== "gold") continue;
+      const g = GOLD[d.ref.i];
+      const s = d.t.startsWith(t) ? 1 : score(qEmb, d);
+      if (s >= 0.45) golds.push({ t: g.q, d: g.d, gold: g, s });
+    }
+    golds.sort((a, b) => b.s - a.s);
+    golds.length = Math.min(golds.length, 2);
+  }
+
   const starts = [], contains = [];
   for (const v of VOCAB) {
     const i = v.t.indexOf(t);
     if (i === 0) starts.push(v);
     else if (i > 0) contains.push(v);
   }
-  return starts.concat(contains).slice(0, 7);
+  let out = golds.concat(
+    starts.concat(contains).filter(v => !golds.some(g => g.t === v.t))
+  );
+
+  if (out.length < 7 && t.length >= 4) {
+    const fuzzy = [];
+    for (const d of SIM.docs) {
+      if (d.ref.type !== "vocab") continue;
+      const v = VOCAB[d.ref.i];
+      if (out.some(o => o.t === v.t)) continue;
+      const s = score(qEmb, d);
+      if (s >= 0.34) fuzzy.push({ ...v, s });
+    }
+    fuzzy.sort((a, b) => b.s - a.s);
+    out = out.concat(fuzzy);
+  }
+  return out.slice(0, 7);
 }
 
 function renderSug() {
@@ -223,8 +315,10 @@ function renderSug() {
     const label = idx >= 0
       ? m.t.slice(0, idx) + "<b>" + m.t.slice(idx, idx + t.length) + "</b>" + m.t.slice(idx + t.length)
       : m.t;
-    return `<div class="s-item${i === state.sel ? " sel" : ""}" data-i="${i}" role="option">
-      <span class="em">${dom.em}</span><span>${label}</span><span class="dl">${dom.label}</span></div>`;
+    const em = m.gold ? "★" : dom.em;
+    const dl = m.gold ? "★ tuned" : dom.label;
+    return `<div class="s-item${i === state.sel ? " sel" : ""}${m.gold ? " s-gold" : ""}" data-i="${i}" role="option">
+      <span class="em">${em}</span><span>${label}</span><span class="dl">${dl}</span></div>`;
   }).join("");
   sug.classList.add("open");
 }
@@ -235,8 +329,9 @@ function accept(i) {
   q.value = m.t;
   state.topic = m.t;
   state.domain = m.d;
+  state.gold = m.gold || null;
   state.matches = []; state.sel = -1;
-  renderSug(); update();
+  renderSug(); renderChips(); update();
 }
 
 /* ---------- chips ---------- */
@@ -263,8 +358,17 @@ chipsEl.addEventListener("click", e => {
 
 /* ---------- prompt render ---------- */
 function currentSegs() {
-  const domId = state.domain || detectDomain(state.topic);
   const active = MODIFIERS.filter(m => state.mods.has(m.id));
+  if (state.gold) {
+    // cached hand-tuned prompt for a top query: served as-is, still composable
+    const g = state.gold;
+    const segs = [{ text: g.p, add: false, kind: "base" }];
+    if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
+    for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+    if (state.drill && g.d !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
+    return segs;
+  }
+  const domId = state.domain || detectDomain(state.topic);
   return buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
 }
 
@@ -272,6 +376,7 @@ const SEG_HINTS = {
   shape: "Click to change depth",
   aud: "Click to remove",
   mod: "Click to remove",
+  multi: "Click to remove",
   drill: "Click to remove the go-deeper menu",
 };
 
@@ -303,6 +408,7 @@ promptEl.addEventListener("click", e => {
   if (seg.kind === "mod") { state.mods.delete(seg.modId); renderChips(); }
   else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; $("toneOut").textContent = toneLabels[1]; }
   else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); $("depthOut").textContent = depthLabels[state.depth]; }
+  else if (seg.kind === "multi") state.noMulti = true;
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
   update();
 });
@@ -349,6 +455,8 @@ $("copy").addEventListener("click", () => copyPrompt());
 q.addEventListener("input", () => {
   state.topic = q.value;
   state.domain = null;          // re-detect while free-typing
+  state.gold = null;            // typing leaves the cached prompt
+  state.noMulti = false;
   state.matches = findMatches(q.value);
   state.sel = state.matches.length ? 0 : -1;
   renderSug(); renderChips(); update();
@@ -393,7 +501,9 @@ $("drill").addEventListener("click", () => { state.drill = !state.drill; syncDri
 syncDrillUI();
 
 /* ---------- init ---------- */
-$("vocabnote").textContent = VOCAB.length ? VOCAB.length + " starter ideas built in." : "";
+$("vocabnote").textContent = VOCAB.length
+  ? VOCAB.length + " starter ideas" + (GOLD.length ? " + " + GOLD.length + " hand-tuned top prompts" : "") + " built in."
+  : "";
 renderChips(); update();
 
 /* deep link: #t=<topic>, applied on load and on hash change */
