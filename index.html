@@ -3,36 +3,154 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prompt Studio has moved</title>
-<meta name="robots" content="noindex">
-<link rel="canonical" href="https://sugeerth.github.io/prompt-studio/">
-<meta http-equiv="refresh" content="0; url=https://sugeerth.github.io/prompt-studio/">
+<title>Prompt Studio ✦ — type less, get exactly what you want</title>
+<meta name="description" content="Type one letter. Get a surgically specific, succinct prompt. Copy or launch straight into ChatGPT, Claude, Gemini or Perplexity.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
-<script>
-  // Preserve any query/hash a shared link carried.
-  location.replace("https://sugeerth.github.io/prompt-studio/" + location.search + location.hash);
-</script>
 <style>
-  :root { --bg: #fbfbfa; --ink: #16222e; --muted: #5f7285; --accent: #486581; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0e141b; --ink: #e8ecf1; --muted: #91a3b5; --accent: #7f9cb8; }
+:root{
+  --bg:#fbfbfa; --panel:#ffffff; --ink:#16222e; --muted:#5f7285; --line:#e4e8ec;
+  --accent:#3b6ea5; --accent-ink:#ffffff; --chip:#eef2f6; --chip-on:#3b6ea5; --chip-on-ink:#fff;
+  --add:#0a7d51; --shadow:0 10px 30px rgba(22,34,46,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0e141b; --panel:#151d26; --ink:#e8ecf1; --muted:#91a3b5; --line:#243140;
+    --accent:#7f9cb8; --accent-ink:#0e141b; --chip:#1d2833; --chip-on:#7f9cb8; --chip-on-ink:#0e141b;
+    --add:#5ec99a; --shadow:0 10px 30px rgba(0,0,0,.35);
   }
-  body {
-    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: var(--bg); color: var(--ink);
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
-  }
-  main { text-align: center; padding: 24px; }
-  h1 { font-size: 22px; letter-spacing: -.01em; }
-  p { color: var(--muted); }
-  a { color: var(--accent); font-weight: 600; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink); min-height:100vh;
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+}
+main{max-width:880px; margin:0 auto; padding:40px 20px 80px}
+header{display:flex; align-items:baseline; gap:12px; margin-bottom:6px}
+h1{font-size:24px; letter-spacing:-.02em; margin:0}
+.tag{color:var(--muted); font-size:14px}
+.sub{color:var(--muted); margin:0 0 26px; font-size:15px}
+
+/* ---- input + suggestions ---- */
+.inputwrap{position:relative}
+#q{
+  width:100%; font:inherit; font-size:20px; padding:18px 52px 18px 20px;
+  border:1.5px solid var(--line); border-radius:16px; background:var(--panel); color:var(--ink);
+  outline:none; box-shadow:var(--shadow); transition:border-color .15s;
+}
+#q:focus{border-color:var(--accent)}
+#q::placeholder{color:var(--muted); opacity:.7}
+.kbd{
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:2px 7px;
+  background:var(--bg); pointer-events:none;
+}
+#sug{
+  position:absolute; z-index:30; left:0; right:0; top:calc(100% + 6px);
+  background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
+  overflow:hidden; display:none;
+}
+#sug.open{display:block}
+.s-item{display:flex; align-items:center; gap:10px; padding:10px 16px; cursor:pointer; font-size:15.5px}
+.s-item .em{width:22px; text-align:center; flex:none}
+.s-item .dl{margin-left:auto; color:var(--muted); font-size:12px; flex:none}
+.s-item.sel,.s-item:hover{background:var(--chip)}
+.s-item b{font-weight:650}
+
+/* ---- chips ---- */
+.row{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; align-items:center}
+.rowlabel{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; width:100%; margin-top:14px}
+.chip{
+  border:1px solid var(--line); background:var(--chip); color:var(--ink);
+  padding:6px 13px; border-radius:999px; font:inherit; font-size:13.5px; cursor:pointer;
+  transition:transform .05s, background .12s;
+}
+.chip:active{transform:scale(.96)}
+.chip.on{background:var(--chip-on); color:var(--chip-on-ink); border-color:var(--chip-on)}
+
+/* ---- sliders ---- */
+.sliders{display:flex; gap:28px; flex-wrap:wrap; margin-top:18px}
+.slider{flex:1; min-width:220px}
+.slider label{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:4px}
+.slider label output{color:var(--ink); font-weight:600}
+input[type=range]{width:100%; accent-color:var(--accent)}
+
+/* ---- prompt card ---- */
+#card{
+  margin-top:22px; background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  box-shadow:var(--shadow); overflow:hidden;
+}
+#prompt{
+  padding:20px; font-size:16.5px; line-height:1.65; min-height:76px; white-space:pre-wrap; word-break:break-word;
+}
+#prompt .adds{color:var(--add)}
+#prompt.empty{color:var(--muted)}
+.actions{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  padding:12px 16px; border-top:1px solid var(--line); background:color-mix(in srgb, var(--panel) 70%, var(--bg));
+}
+.btn{
+  font:inherit; font-size:14.5px; font-weight:650; cursor:pointer; border-radius:11px;
+  padding:10px 18px; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+  transition:transform .05s;
+}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-size:15.5px}
+.launch{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap}
+.launch .btn{font-weight:500; font-size:13.5px; padding:9px 13px}
+.count{font-size:12px; color:var(--muted); width:100%; padding:0 16px 10px; text-align:right}
+
+#toast{
+  position:fixed; left:50%; bottom:34px; transform:translate(-50%, 20px);
+  background:var(--ink); color:var(--bg); padding:11px 20px; border-radius:12px; font-size:14.5px;
+  opacity:0; pointer-events:none; transition:.25s; z-index:60; box-shadow:var(--shadow);
+}
+#toast.show{opacity:1; transform:translate(-50%,0)}
+
+footer{margin-top:46px; color:var(--muted); font-size:13px}
+footer a{color:var(--accent)}
+@media (max-width:640px){ .launch{margin-left:0} #q{font-size:17px} }
 </style>
 </head>
 <body>
 <main>
-  <h1>Prompt Studio ✦ has moved</h1>
-  <p>Taking you to the new home… If nothing happens,
-     <a href="https://sugeerth.github.io/prompt-studio/">continue to sugeerth.github.io/prompt-studio</a>.</p>
+  <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
+  <p class="sub">Start typing anything. A short, sharp prompt builds itself — copy it, or launch it straight into your AI.</p>
+
+  <div class="inputwrap">
+    <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+           placeholder="explain machine learning · fix my resume · trip to japan…" autofocus>
+    <span class="kbd">↵ copies</span>
+    <div id="sug" role="listbox"></div>
+  </div>
+
+  <div class="row" id="chips"></div>
+
+  <div class="sliders">
+    <div class="slider">
+      <label><span>Depth</span><output id="depthOut">Standard</output></label>
+      <input type="range" id="depth" min="0" max="2" step="1" value="1">
+    </div>
+    <div class="slider">
+      <label><span>Audience</span><output id="toneOut">Anyone</output></label>
+      <input type="range" id="tone" min="0" max="2" step="1" value="1">
+    </div>
+  </div>
+
+  <div id="card">
+    <div id="prompt" class="empty"></div>
+    <div class="count" id="count"></div>
+    <div class="actions">
+      <button class="btn primary" id="copy">Copy prompt</button>
+      <div class="launch" id="launch"></div>
+    </div>
+  </div>
+
+  <footer>Free, private, nothing leaves your browser. <span id="vocabnote"></span></footer>
 </main>
+<div id="toast"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
