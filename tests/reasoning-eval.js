@@ -12,8 +12,13 @@ const fs = require('fs');
 const path = require('path');
 
 global.window = {};
+// graph.js must load first — the ladder consults the real graph, so the eval
+// must exercise that same path rather than the degraded no-graph fallback
+// eslint-disable-next-line no-eval
+eval(fs.readFileSync(path.join(__dirname, '..', 'graph.js'), 'utf8'));
 // eslint-disable-next-line no-eval
 eval(fs.readFileSync(path.join(__dirname, '..', 'reason.js'), 'utf8'));
+if (!global.window.PS_GRAPH) { console.log('FAILED: graph.js did not load'); process.exit(1); }
 const { analyze, scaffoldFor, LEVEL_NAME } = global.window.PS_REASON;
 
 /* label = the level a careful human would assign, judging only structure */

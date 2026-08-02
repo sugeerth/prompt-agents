@@ -88,13 +88,23 @@
     const words = text.trim().split(/\s+/).filter(Boolean).length;
 
     const entities = entitiesOf(text);
+
+    /* The real graph is the stronger evidence where it speaks: a cycle found by
+       Tarjan is a mutual dependency that actually exists in the structure, not
+       a keyword that hints at one. Cue counts stay as the floor, because a
+       3-node graph is too small for its metrics to be trusted alone. */
+    const graph = (typeof window !== "undefined" && window.PS_GRAPH)
+      ? window.PS_GRAPH.analyze(text) : null;
+    const gCoupling = graph ? graph.cyclic.length : 0;
+    const gDepth = graph ? graph.depth : 0;
     const framing = count(t, CUE.framing);
     const constraints = count(t, CUE.constraint);   // structural only
     const sequence = count(t, CUE.sequence);
     const condition = count(t, CUE.condition);
-    const coupling = count(t, CUE.couple);
+    const coupling = Math.max(count(t, CUE.couple), gCoupling);
     const arity = comparisonArity(t);
     const compare = count(t, CUE.compare) > 0 || arity >= 2;
+
 
     // graph size: one node per distinct entity, constraint, and option
     const options = arity >= 2 ? arity : 0;
@@ -103,7 +113,7 @@
     // conditions branch, coupling cues cross-link constraints to entities
     const E = constraints + (options >= 2 ? options - 1 : 0) + sequence + condition + coupling;
     const density = V ? +(E / V).toFixed(2) : 0;
-    const depth = sequence > 0 ? sequence + 1 : 1;          // longest dependency chain
+    const depth = Math.max(sequence > 0 ? sequence + 1 : 1, gDepth + 1);   // longest dependency chain
     const branch = Math.max(options, condition > 0 ? condition + 1 : 1); // max out-degree
 
     /* --- ladder ---------------------------------------------------------
@@ -129,7 +139,7 @@
       level = 0;
 
     return {
-      level, V, E, density, depth, branch, arity, coupling, framing,
+      level, V, E, density, depth, branch, arity, coupling, framing, graph,
       entities: entities.slice(0, 8), constraints, compare,
       why: whyText({ level, entities, constraints, arity, depth, branch, coupling, compare }),
     };
@@ -204,7 +214,53 @@
     return out;
   }
 
+  /* --- graph-derived guidance ------------------------------------------
+     What the algorithms found about the SHAPE OF THE PROBLEM, said in one
+     line. These describe the ask's structure, never the answer's format —
+     "settle these together" is about what to solve, not how to write it.
+
+     At most one line is emitted, the most actionable finding. A mutual
+     dependency changes how the whole thing must be solved, so it outranks
+     everything; independence is next because it licenses answering parts
+     separately; ordering and crux are weaker hints. When the graph finds no
+     structure, it says nothing at all — silence is the correct output for a
+     simple ask. */
+  function graphFindings(metrics) {
+    const g = metrics.graph;
+    if (!g || g.n < 3) return [];
+    /* Only name things worth naming. A label the user would not recognise as
+       one of their own words is noise, and noise in a prompt is worse than
+       silence — so an unnameable finding falls back to the generic phrasing
+       rather than listing fragments. */
+    const nameable = xs => xs.filter(x => x.length >= 4 && !/^\d+$/.test(x)).slice(0, 3);
+    const pretty = xs => (xs.length === 2 ? xs.join(" and ") : xs.join(", "));
+
+    // a cycle: quantities that constrain each other and cannot be fixed in turn
+    if (g.cyclic.length && g.cycleGroups[0].length >= 2) {
+      const named = nameable(g.cycleGroups[0]);
+      return [{ kind: "graph", text: named.length >= 2
+        ? `${pretty(named)} constrain each other — settle them together.`
+        : "Several of these constraints pull against each other — settle them together." }];
+    }
+
+    // disconnected sub-problems: nothing links them, so they can be answered apart
+    if (g.independent >= 2 && g.n >= 5)
+      return [{ kind: "graph", text: "These parts are independent — resolve them separately, then combine." }];
+
+    // a real dependency chain: order matters
+    if (g.depth >= 2 && g.criticalPath.length >= 2)
+      return [{ kind: "graph", text: `Resolve in order: ${g.criticalPath.slice(0, 3).join(" → ")}.` }];
+
+    // one node the rest of the ask hangs off, and it stands clear of the field
+    if (g.articulation.length && g.n >= 6)
+      return [{ kind: "graph", text: `Everything here hinges on ${g.articulation[0]} — settle that first.` }];
+    if (g.crux && g.cruxMargin >= 0.06 && g.n >= 5)
+      return [{ kind: "graph", text: `${g.crux} is the deciding factor — start there.` }];
+
+    return [];
+  }
+
   const LEVEL_NAME = ["Atomic", "Shaped", "Composite", "Coupled"];
 
-  window.PS_REASON = { analyze, scaffoldFor, LEVEL_NAME };
+  window.PS_REASON = { analyze, scaffoldFor, graphFindings, LEVEL_NAME };
 })();

@@ -403,6 +403,11 @@ function reasonSegs(domId) {
   const m = REASON.analyze(state.topic);
   const out = REASON.scaffoldFor(m, domId, state.reason, state.steer === "native" ? "native" : "shaped")
     .map(s => ({ text: s.text, add: true, kind: s.kind }));
+  /* What the graph found about the problem's structure. Native stays the
+     user's own words plus their goal, so structural guidance waits for a
+     steer level that has asked for help. */
+  if (state.steer !== "native" && state.reason !== "off" && !state.noGraph)
+    out.push(...REASON.graphFindings(m).map(s => ({ text: s.text, add: true, kind: s.kind })));
   const covered = out.some(s => /my constraints/.test(s.text));
   if (!state.noMulti && m.constraints >= 2 && !covered)
     out.unshift({ text: "Cover every constraint I stated.", add: true, kind: "multi" });
@@ -480,6 +485,7 @@ const SEG_HINTS = {
   multi: "Click to remove",
   intent: "What the app thinks you want — click to remove",
   need: "Click to remove",
+  graph: "Found by the intent graph — click to remove",
   reason: "Added by the reasoning layer — click to turn reasoning off",
   verify: "Added by the reasoning layer — click to turn reasoning off",
   drill: "Click to remove the go-deeper menu",
@@ -572,6 +578,7 @@ promptEl.addEventListener("click", e => {
   else if (seg.kind === "multi") state.noMulti = true;
   else if (seg.kind === "intent") state.noIntent = true;
   else if (seg.kind === "need") state.noNeed = true;
+  else if (seg.kind === "graph") state.noGraph = true;
   else if (seg.kind === "reason" || seg.kind === "verify") { state.reason = "off"; syncReasonUI(); }
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
   update();
@@ -623,6 +630,7 @@ q.addEventListener("input", () => {
   state.noMulti = false;
   state.noIntent = false;
   state.noNeed = false;
+  state.noGraph = false;
   state.matches = findMatches(q.value);
   state.sel = state.matches.length ? 0 : -1;
   renderSug(); renderChips(); update();

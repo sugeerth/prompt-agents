@@ -10,13 +10,15 @@ jobs:
   # Fast gate: the reasoning ladder is scored against a labelled corpus and
   # its invariants are checked. No browser, runs in seconds.
   reasoning:
-    name: reasoning + intent evals
+    name: graph + reasoning + intent evals
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Graph algorithms
+        run: node tests/graph-eval.js
       - name: Score the complexity ladder
         run: node tests/reasoning-eval.js
       - name: Score intent recognition
