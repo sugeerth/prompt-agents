@@ -76,7 +76,7 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .slider label{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:4px}
 .slider label output{color:var(--ink); font-weight:600}
 input[type=range]{width:100%; accent-color:var(--accent)}
-.drillwrap{min-width:170px; flex:0 1 auto}
+.drillwrap{min-width:132px; flex:0 1 auto}
 .switch{
   display:block; width:44px; height:24px; border-radius:999px; border:1px solid var(--line);
   background:var(--chip); cursor:pointer; position:relative; padding:0; transition:background .15s;
@@ -173,7 +173,7 @@ footer a{color:var(--accent)}
               title="Tight answer first, then 3 numbered drill-downs you pick from"></button>
     </div>
     <div class="slider drillwrap">
-      <label><span>Reasoning</span><output id="reasonOut">Auto</output></label>
+      <label><span>Reasoning</span><output id="reasonOut">when earned</output></label>
       <button id="reason" class="modebtn" type="button"
               title="Auto: spend reasoning only when the ask is structurally complex. Always: force it. Off: never.">Auto</button>
     </div>
