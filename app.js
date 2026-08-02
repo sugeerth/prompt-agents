@@ -115,11 +115,12 @@ const SIGS = [
   ["cook",    /\b(recipe|cook|bake|dinner|meal|marinade|air fryer|slow cooker)\b/i],
   ["local",   /\b(near me|nearby|nearest|closest|around here|in town|directions to|places to (see|eat|visit)|hidden gems|things to do|day trips?)\b/i],
   ["travel",  /\b(trip|itinerary|travel|vacation|days? in|visit)\b/i],
-  ["money",   /\b(invest|budget|salary|mortgage|loan|savings?|retire|tax|debt|401k|credit)\b/i],
+  // "on a budget" is a constraint on some other ask, not a finance question
+  ["money",   /\b(invest|salary|mortgage|loan|savings?|retire|tax|debt|401k|credit)\b|\bbudgeting\b|\bbudget (for|of|plan|breakdown|spreadsheet)\b|\bmy budget\b/i],
   ["fit",     /\b(workout|gym|exercise|run(ning)?|strength|cardio|stretch|muscle)\b/i],
   ["health",  /\b(sleep|diet|pain|symptom|doctor|anxiety|stress|vitamin|allerg)\b/i],
   ["parent",  /\b(toddler|baby|kid|child|teen|potty|tantrum)\b/i],
-  ["decide",  /\b(vs\.?|versus|or should|which is|better|worth it|choose|decide)\b/i],
+  ["decide",  /\b(vs\.?|versus|should i|or should|which is|better|worth it|choose|decide)\b/i],
   ["shop",    /\b(buy|best (cheap|budget)|under \$|which .*to get|recommend a)\b/i],
   ["write",   /\b(write|draft|essay|blog|post|caption|bio|speech|story|resume|cover letter)\b/i],
   ["image",   /\b(image|logo|illustration|poster|icon|midjourney|art)\b/i],
@@ -187,10 +188,6 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
-  // complex asks: several intents in one line ("10 days japan with kids on a budget")
-  // get one guard line so no stated constraint is dropped
-  if (!state.noMulti && t.split(" ").length >= 6 && SIGS.filter(s => s[1].test(t)).length >= 2)
-    segs.push({ text: "Cover every constraint I stated.", add: true, kind: "multi" });
   if (drill && domId !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
   if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
   return segs;
@@ -262,7 +259,9 @@ function score(qEmb, d) {
 }
 
 /* ---------- state ---------- */
-const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [], drill: true, gold: null };
+const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [],
+                drill: true, gold: null, reason: "auto", graphOpen: false };
+const REASON = window.PS_REASON;
 
 /* ---------- elements ---------- */
 const $ = id => document.getElementById(id);
@@ -365,6 +364,22 @@ chipsEl.addEventListener("click", e => {
 });
 
 /* ---------- prompt render ---------- */
+/* the reasoning layer decides, from the ask's own structure, how much
+   thinking to buy — and phrases it so depth never becomes length.
+   A multi-constraint ask also gets one completeness guard, but only when no
+   scaffold already points the model at those constraints: two lines saying
+   the same thing is two lines too many. */
+function reasonSegs(domId) {
+  if (!REASON || !state.topic.trim()) return [];
+  const m = REASON.analyze(state.topic);
+  const out = REASON.scaffoldFor(m, domId, state.reason)
+    .map(s => ({ text: s.text, add: true, kind: s.kind }));
+  const covered = out.some(s => /my constraints/.test(s.text));
+  if (!state.noMulti && m.constraints >= 2 && !covered)
+    out.unshift({ text: "Cover every constraint I stated.", add: true, kind: "multi" });
+  return out;
+}
+
 function currentSegs() {
   const active = MODIFIERS.filter(m => state.mods.has(m.id));
   if (state.gold) {
@@ -373,11 +388,18 @@ function currentSegs() {
     const segs = [{ text: g.p, add: false, kind: "base" }];
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+    segs.push(...reasonSegs(g.d));
     if (state.drill && g.d !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
     return segs;
   }
   const domId = state.domain || detectDomain(state.topic);
-  return buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
+  const segs = buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
+  if (!segs.length) return segs;
+  // reasoning goes before the go-deeper menu and the paste marker
+  const at = segs.findIndex(s => s.kind === "drill" || s.kind === "marker");
+  const rs = reasonSegs(domId);
+  if (at === -1) segs.push(...rs); else segs.splice(at, 0, ...rs);
+  return segs;
 }
 
 const SEG_HINTS = {
@@ -385,6 +407,8 @@ const SEG_HINTS = {
   aud: "Click to remove",
   mod: "Click to remove",
   multi: "Click to remove",
+  reason: "Added by the reasoning layer — click to turn reasoning off",
+  verify: "Added by the reasoning layer — click to turn reasoning off",
   drill: "Click to remove the go-deeper menu",
 };
 
@@ -405,6 +429,58 @@ function update() {
   }).join(" ");
   const text = segsToText(segs);
   countEl.textContent = text.split(/\s+/).length + " words";
+  renderMetrics();
+}
+
+/* ---------- reasoning readout: the graph the layer actually measured ---------- */
+const metricsEl = $("metrics"), graphEl = $("graph");
+
+function renderMetrics() {
+  if (!REASON || !state.topic.trim()) { metricsEl.innerHTML = ""; graphEl.classList.remove("open"); return; }
+  const m = REASON.analyze(state.topic);
+  const spent = state.reason === "off" ? "no reasoning spent"
+    : REASON.scaffoldFor(m, state.domain || detectDomain(state.topic), state.reason).length
+      ? "reasoning spent" : "no reasoning needed";
+  metricsEl.innerHTML =
+    `<button class="cx" data-l="${m.level}" type="button" title="Click to see the intent graph">` +
+    `L${m.level} ${REASON.LEVEL_NAME[m.level]}</button>` +
+    `<span>${m.why} · ${m.V} ${m.V === 1 ? "node" : "nodes"}, ${m.E} ${m.E === 1 ? "link" : "links"} · ${spent}</span>`;
+  if (state.graphOpen) drawGraph(m); else graphEl.classList.remove("open");
+}
+
+metricsEl.addEventListener("click", e => {
+  if (!e.target.closest(".cx")) return;
+  state.graphOpen = !state.graphOpen;
+  renderMetrics();
+});
+
+/* a small radial view: the ask at the centre, topics around it, constraints
+   attached to the ring — the structure the level was derived from */
+function drawGraph(m) {
+  const W = 560, H = 150, cx = W / 2, cy = H / 2;
+  const ents = m.entities.slice(0, 6);
+  const parts = [];
+  parts.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="intent graph">`);
+  const R = 52;
+  ents.forEach((word, i) => {
+    const a = (i / Math.max(ents.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(a) * (R + 46), y = cy + Math.sin(a) * R;
+    parts.push(`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="currentColor" stroke-opacity=".22"/>`);
+    parts.push(`<circle cx="${x}" cy="${y}" r="4.5" fill="currentColor" fill-opacity=".45"/>`);
+    const anchor = x < cx ? "end" : "start";
+    parts.push(`<text x="${x + (x < cx ? -8 : 8)}" y="${y + 3}" text-anchor="${anchor}">${
+      word.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text>`);
+  });
+  parts.push(`<circle cx="${cx}" cy="${cy}" r="9" fill="currentColor" fill-opacity=".8"/>`);
+  parts.push(`<text x="${cx}" y="${cy + 24}" text-anchor="middle">ask</text>`);
+  // constraint ring: one tick per constraint bounding the whole ask
+  for (let i = 0; i < Math.min(m.constraints, 8); i++) {
+    const a = (i / 8) * Math.PI * 2;
+    parts.push(`<circle cx="${cx + Math.cos(a) * 20}" cy="${cy + Math.sin(a) * 20}" r="2.5" fill="currentColor" fill-opacity=".5"/>`);
+  }
+  parts.push("</svg>");
+  graphEl.innerHTML = parts.join("");
+  graphEl.classList.add("open");
 }
 
 /* the prompt itself is the control surface: click a piece to edit it */
@@ -417,6 +493,7 @@ promptEl.addEventListener("click", e => {
   else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; $("toneOut").textContent = toneLabels[1]; }
   else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); $("depthOut").textContent = depthLabels[state.depth]; }
   else if (seg.kind === "multi") state.noMulti = true;
+  else if (seg.kind === "reason" || seg.kind === "verify") { state.reason = "off"; syncReasonUI(); }
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
   update();
 });
@@ -507,6 +584,19 @@ function syncDrillUI() {
 }
 $("drill").addEventListener("click", () => { state.drill = !state.drill; syncDrillUI(); update(); });
 syncDrillUI();
+
+/* reasoning mode: auto (spend only when the structure earns it) → always → off */
+const REASON_MODES = ["auto", "force", "off"];
+const REASON_LABEL = { auto: "Auto", force: "Always", off: "Off" };
+function syncReasonUI() {
+  $("reason").textContent = REASON_LABEL[state.reason];
+  $("reasonOut").textContent = REASON_LABEL[state.reason];
+}
+$("reason").addEventListener("click", () => {
+  state.reason = REASON_MODES[(REASON_MODES.indexOf(state.reason) + 1) % REASON_MODES.length];
+  syncReasonUI(); update();
+});
+syncReasonUI();
 
 /* ---------- init ---------- */
 $("vocabnote").textContent = VOCAB.length

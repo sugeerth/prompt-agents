@@ -1,0 +1,43 @@
+name: eval
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Fast gate: the reasoning ladder is scored against a labelled corpus and
+  # its invariants are checked. No browser, runs in seconds.
+  reasoning:
+    name: reasoning ladder eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Score the complexity ladder
+        run: node tests/reasoning-eval.js
+
+  # Full behaviour: the app is driven in a real browser.
+  ui:
+    name: browser suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Core engine
+        run: node tests/ui-core.js
+      - name: Interactive prompt
+        run: node tests/ui-interactive.js
+      - name: Similarity + gold cache
+        run: node tests/ui-similarity.js
+      - name: Reasoning layer
+        run: node tests/ui-reasoning.js

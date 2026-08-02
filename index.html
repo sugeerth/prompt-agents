@@ -114,6 +114,23 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 .launch{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap}
 .launch .btn{font-weight:500; font-size:13.5px; padding:9px 13px}
 .count{font-size:12px; color:var(--muted); width:100%; padding:0 16px 10px; text-align:right}
+.modebtn{
+  font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:4px 12px;
+  border-radius:999px; border:1px solid var(--line); background:var(--chip); color:var(--ink);
+}
+.metrics{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:10px 16px 0; font-size:12px; color:var(--muted);
+}
+.cx{
+  border:1px solid var(--line); border-radius:999px; padding:2px 10px; cursor:pointer;
+  font-weight:650; color:var(--ink); background:var(--chip);
+}
+.cx[data-l="2"]{color:#8a6d1f; border-color:#d9c48a}
+.cx[data-l="3"]{color:#8a3a1f; border-color:#e0b09a}
+#graph{width:100%; padding:4px 16px 0; display:none}
+#graph.open{display:block}
+#graph text{font-size:9px; fill:var(--muted)}
 
 #toast{
   position:fixed; left:50%; bottom:34px; transform:translate(-50%, 20px);
@@ -155,10 +172,17 @@ footer a{color:var(--accent)}
       <button id="drill" class="switch on" type="button" aria-pressed="true"
               title="Tight answer first, then 3 numbered drill-downs you pick from"></button>
     </div>
+    <div class="slider drillwrap">
+      <label><span>Reasoning</span><output id="reasonOut">Auto</output></label>
+      <button id="reason" class="modebtn" type="button"
+              title="Auto: spend reasoning only when the ask is structurally complex. Always: force it. Off: never.">Auto</button>
+    </div>
   </div>
 
   <div id="card">
     <div id="prompt" class="empty"></div>
+    <div class="metrics" id="metrics"></div>
+    <div id="graph"></div>
     <div class="count" id="count"></div>
     <div class="actions">
       <button class="btn primary" id="copy">Copy prompt</button>
@@ -171,6 +195,7 @@ footer a{color:var(--accent)}
 <div id="toast"></div>
 
 <script src="data.js"></script>
+<script src="reason.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
