@@ -588,9 +588,11 @@ syncDrillUI();
 /* reasoning mode: auto (spend only when the structure earns it) → always → off */
 const REASON_MODES = ["auto", "force", "off"];
 const REASON_LABEL = { auto: "Auto", force: "Always", off: "Off" };
+// the button already names the mode — the label says what the mode does
+const REASON_HINT = { auto: "when earned", force: "forced", off: "never" };
 function syncReasonUI() {
   $("reason").textContent = REASON_LABEL[state.reason];
-  $("reasonOut").textContent = REASON_LABEL[state.reason];
+  $("reasonOut").textContent = REASON_HINT[state.reason];
 }
 $("reason").addEventListener("click", () => {
   state.reason = REASON_MODES[(REASON_MODES.indexOf(state.reason) + 1) % REASON_MODES.length];
