@@ -43,8 +43,68 @@ Users have no attention span — neither should prompts.
 - **One-tap launch.** Copy with ⏎, or open ChatGPT / Claude / Perplexity with the
   prompt pre-filled (Gemini: copied + opened).
 
+## The reasoning layer
+
+The newest mode. Instead of treating every ask the same, the app models it as a
+small **intent graph** and spends reasoning in proportion to that graph's shape.
+
+- **Nodes** — entities (what the ask is about), constraints (what bounds it),
+  options (what's being chosen between).
+- **Edges** — CONSTRAIN, COMPARE, SEQUENCE (dependency depth), CONDITION
+  (branching), COUPLE (one constraint pulling on several entities at once —
+  the real driver of difficulty).
+- **Metrics → ladder** — node/edge counts, density, longest dependency path,
+  max out-degree, comparison arity and constraint coupling place the ask on a
+  4-level ladder: **L0 Atomic · L1 Shaped · L2 Composite · L3 Coupled**.
+
+What each level buys:
+
+| Level | Signature | Reasoning spent |
+|---|---|---|
+| L0 | one thing, unbounded | none — a scaffold here costs tokens and can *lower* accuracy |
+| L1 | one thing, bounded | none, except a compressed 5-word-step chain for computational asks |
+| L2 | parts must resolve before an answer exists | integrate the sub-questions, show only the result + one line of why |
+| L3 | several things weighed at once, or a chain under constraints | weigh 3 approaches against the constraints, show only the winner, why, and what would flip the call |
+
+High-stakes domains (money, health, legal, code, math) additionally get a
+single verification line at L2+.
+
+**Deep reasoning, shallow output.** The scaffolds never ask for *less* thinking:
+telling a model to be brief on a hard ask measurably degrades its reasoning
+([Short-Path Prompting, arXiv 2504.09586](https://arxiv.org/abs/2504.09586)), so
+each line grants unlimited reasoning and constrains only what gets rendered —
+today's providers keep that chain in hidden thinking tokens. Every scaffold also
+keeps a residual "one line of why" slot, which preserves far more accuracy than
+a bare "just answer". The L1 computational line follows
+[Chain of Draft (arXiv 2502.18600)](https://arxiv.org/abs/2502.18600); the L0
+no-scaffold branch follows
+[AdaptThink (arXiv 2505.13417)](https://arxiv.org/abs/2505.13417), where skipping
+thought on easy items *improved* accuracy while cutting length by half. L3 ships
+compressed candidate-scoring rather than pretending to run tree/graph search — a
+single prompt has no search loop, and asking for one buys the vocabulary of
+search at several times the tokens.
+
+Click the **L2 Composite** style badge under any prompt to see the intent graph
+the level was derived from. The **Reasoning** control cycles Auto (spend only
+when the structure earns it) → Always → Off.
+
+## Tests
+
+`npm test` runs everything; CI (`.github/workflows/eval.yml`) runs it on every
+push and PR.
+
+- `npm run test:eval` — scores the complexity ladder against a labelled corpus,
+  prints a confusion matrix, and gates on accuracy plus three invariants: no
+  reasoning is ever spent on an atomic ask, no scaffold suppresses reasoning,
+  and spend is monotonic in complexity.
+- `npm run test:ui` — drives the real app in headless Chromium: the domain
+  engine across every domain, all modifier chips, clipboard, launch URLs, XSS
+  escaping, deep links, mobile overflow, similarity matching, the gold cache,
+  and the reasoning layer end to end.
+
 No build step, no dependencies, no network calls, nothing leaves the browser.
-`index.html` + `app.js` (engine) + `data.js` (vocabulary & modifiers) — that's the whole app.
+`index.html` + `app.js` (engine) + `reason.js` (reasoning layer) + `data.js`
+(vocabulary, modifiers, gold cache) — that is the whole app.
 
 Modifier phrasings and prompt patterns are distilled from public prompt-engineering
 guidance (Anthropic, OpenAI, Google) and community prompt libraries.
