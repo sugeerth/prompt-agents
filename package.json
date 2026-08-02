@@ -2,11 +2,11 @@
   "name": "prompt-studio",
   "version": "2.0.0",
   "private": true,
-  "description": "Type less, get exactly what you want — a client-side prompt builder with a reasoning layer.",
+  "description": "Type less, get exactly what you want \u2014 a client-side prompt builder with a reasoning layer.",
   "scripts": {
-    "test": "node tests/reasoning-eval.js && npm run test:ui",
-    "test:eval": "node tests/reasoning-eval.js",
-    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js"
+    "test": "npm run test:eval && npm run test:ui",
+    "test:eval": "node tests/reasoning-eval.js && node tests/intent-eval.js",
+    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js && node tests/ui-steer.js"
   },
   "devDependencies": {
     "playwright": "^1.47.0"

@@ -43,6 +43,41 @@ Users have no attention span — neither should prompts.
 - **One-tap launch.** Copy with ⏎, or open ChatGPT / Claude / Perplexity with the
   prompt pre-filled (Gemini: copied + opened).
 
+## Steer: how much the prompt is allowed to shape the reply
+
+A prompt that dictates form gets a *shaped* answer. A prompt that conveys intent
+gets a *good* one. Sometimes you want the model's own voice — so shaping is a
+control, not a default posture, and it starts in the middle.
+
+| Steer | The prompt carries | Good for |
+|---|---|---|
+| **Native** | your words + what you want, and nothing else | letting the model answer the way it would answer a person |
+| **Guided** (default) | light framing, your goal, and a follow-up menu | most asks |
+| **Shaped** | also fixes the answer's shape and length | when you need a specific artifact |
+
+Native is genuinely native: no answer shape, no word cap, no follow-up menu, and
+reasoning phrased so it never touches the form of the reply. Only two things
+always survive, because they are content rather than form — *preconditions*
+("ask where I am first if it changes the answer") and what you actually want.
+
+## Intent recognition
+
+Domain answers *what this is about*. Intent answers the more useful question:
+*what does this person want to happen?* The same topic carries different goals —
+someone curious about fermentation and someone whose starter died this morning
+both type "sourdough starter".
+
+Nine goals are recognized — **understand · decide · make · do · fix · explore ·
+check · plan · find** — each contributing one line that states the goal and
+never the format. Recognition also drives two other things: it picks the domain
+when no topic cue fires ("my wifi keeps dropping" names no domain noun but is
+unmistakably a fix), and it stops a review request being framed as a drafting
+request.
+
+When confidence is low, the prompt asks instead of assuming: *"If my goal here
+is ambiguous, ask me one question before answering."* A confidently wrong frame
+costs more than a round trip.
+
 ## The reasoning layer
 
 The newest mode. Instead of treating every ask the same, the app models it as a
@@ -93,18 +128,22 @@ when the structure earns it) → Always → Off.
 `npm test` runs everything; CI (`.github/workflows/eval.yml`) runs it on every
 push and PR.
 
-- `npm run test:eval` — scores the complexity ladder against a labelled corpus,
-  prints a confusion matrix, and gates on accuracy plus three invariants: no
-  reasoning is ever spent on an atomic ask, no scaffold suppresses reasoning,
-  and spend is monotonic in complexity.
+- `npm run test:eval` — two scored evals, no browser. The **complexity ladder**
+  against a labelled corpus with a confusion matrix, gated on accuracy plus
+  three invariants (no reasoning spent on an atomic ask, no scaffold suppresses
+  reasoning, spend monotonic in complexity). The **intent recognizer** against a
+  labelled corpus, gated on accuracy plus invariants that no intent line ever
+  dictates format and that ambiguous input yields low confidence.
 - `npm run test:ui` — drives the real app in headless Chromium: the domain
   engine across every domain, all modifier chips, clipboard, launch URLs, XSS
   escaping, deep links, mobile overflow, similarity matching, the gold cache,
-  and the reasoning layer end to end.
+  the reasoning layer, and every steer level — including a check that Native
+  never dictates shape, length or structure.
 
 No build step, no dependencies, no network calls, nothing leaves the browser.
-`index.html` + `app.js` (engine) + `reason.js` (reasoning layer) + `data.js`
-(vocabulary, modifiers, gold cache) — that is the whole app.
+`index.html` + `app.js` (engine) + `intent.js` (goal recognition) + `reason.js`
+(reasoning layer) + `data.js` (vocabulary, modifiers, gold cache) — that is the
+whole app.
 
 Modifier phrasings and prompt patterns are distilled from public prompt-engineering
 guidance (Anthropic, OpenAI, Google) and community prompt libraries.

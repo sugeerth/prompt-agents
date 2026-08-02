@@ -181,12 +181,24 @@
   const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "math", "analyze", "biz"]);
   const VERIFY = "Check the answer once for the most likely error before replying.";
 
-  function scaffoldFor(metrics, domId, mode) {
+  /* Native variants grant the same thinking without touching the shape of the
+     reply. When the user wants the model's own voice, a scaffold may still say
+     "this one is worth slowing down for" — it may not say how to answer. */
+  const NATIVE_SCAFFOLD = {
+    0: null,
+    1: null,
+    2: "Worth thinking through properly before you answer.",
+    3: "Worth thinking through properly — several of these constraints pull against each other.",
+  };
+
+  function scaffoldFor(metrics, domId, mode, style) {
     if (mode === "off") return [];
     const level = mode === "force" ? Math.max(metrics.level, 2) : metrics.level;
+    const native = style === "native";
+    const table = native ? NATIVE_SCAFFOLD : SCAFFOLD;
     const out = [];
-    if (SCAFFOLD[level]) out.push({ text: SCAFFOLD[level], kind: "reason" });
-    else if (level === 1 && COMPUTE_DOMAINS.has(domId))
+    if (table[level]) out.push({ text: table[level], kind: "reason" });
+    else if (!native && level === 1 && COMPUTE_DOMAINS.has(domId))
       out.push({ text: COMPUTE_STEPS, kind: "reason" });
     if (level >= 2 && VERIFY_DOMAINS.has(domId)) out.push({ text: VERIFY, kind: "verify" });
     return out;

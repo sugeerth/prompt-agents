@@ -126,6 +126,7 @@ input[type=range]{width:100%; accent-color:var(--accent)}
   border:1px solid var(--line); border-radius:999px; padding:2px 10px; cursor:pointer;
   font-weight:650; color:var(--ink); background:var(--chip);
 }
+.want{border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-weight:650; color:var(--ink)}
 .cx[data-l="2"]{color:#8a6d1f; border-color:#d9c48a}
 .cx[data-l="3"]{color:#8a3a1f; border-color:#e0b09a}
 #graph{width:100%; padding:4px 16px 0; display:none}
@@ -147,7 +148,7 @@ footer a{color:var(--accent)}
 <body>
 <main>
   <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
-  <p class="sub">Start typing anything. A short, sharp prompt builds itself — click any part of it to change it, then copy or launch. Answers come back tight, with numbered ways to go deeper.</p>
+  <p class="sub">Start typing anything. A prompt builds itself from what you actually want — click any part to change it, then copy or launch. Steer it from the model's own voice to a tightly shaped answer.</p>
 
   <div class="inputwrap">
     <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -159,7 +160,12 @@ footer a{color:var(--accent)}
   <div class="row" id="chips"></div>
 
   <div class="sliders">
-    <div class="slider">
+    <div class="slider drillwrap">
+      <label><span>Steer</span><output id="steerOut">say what I want</output></label>
+      <button id="steer" class="modebtn" type="button"
+              title="Native: your words + what you want, then let the model answer its own way. Guided: adds light framing and a follow-up menu. Shaped: also fixes the answer's shape and length.">Guided</button>
+    </div>
+    <div class="slider" id="depthWrap">
       <label><span>Depth</span><output id="depthOut">Standard</output></label>
       <input type="range" id="depth" min="0" max="2" step="1" value="1">
     </div>
@@ -196,6 +202,7 @@ footer a{color:var(--accent)}
 
 <script src="data.js"></script>
 <script src="reason.js"></script>
+<script src="intent.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

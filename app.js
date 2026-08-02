@@ -81,9 +81,9 @@ const DOMAINS = {
   tech:      { em:"📱", label:"Tech help", base:t=>`Tech help: ${t}.`, shapes:[ null,
     "The fix in numbered steps for a non-expert, plus what to check if it doesn't work.", null ]},
   local:     { em:"📍", label:"Nearby",    base:t=>`Recommend: ${t}.`, shapes:[
-    "Top 3 only — name plus one line each. Ask my location first if you need it.",
-    "Top 5 in a table (name, why it's worth it, cost). Ask my location first if it matters.",
-    "Top 7 in a table (name, why, cost, time needed), grouped by area, plus the one tourist trap to skip. Ask my location first if it matters." ]},
+    "Top 3 only — name plus one line each.",
+    "Top 5 in a table (name, why it's worth it, cost).",
+    "Top 7 in a table (name, why, cost, time needed), grouped by area, plus the one tourist trap to skip." ]},
   decide:    { em:"🤔", label:"Decide",    base:t=>`Help me decide: ${t}.`, shapes:[
     "Your pick in one sentence, with the reason.",
     "Compare the options in a small table, then your pick in 2 sentences. If it depends, tell me the one deciding question.",
@@ -130,8 +130,26 @@ const SIGS = [
   ["agent",   /\b(automate|workflow|step by step task|pipeline|agent)\b/i],
 ];
 
+/* When no topic cue fires, what the user WANTS is the next best evidence for
+   which domain to frame the ask as. "my wifi keeps dropping" names no domain
+   noun, but the goal is unmistakably to fix something. */
+const INTENT_DOMAIN = {
+  fix: "tech", make: "write", explore: "create", plan: "plan",
+  find: "local", decide: "decide", understand: "learn", check: "analyze",
+};
+
+/* Domains that produce an artifact. Asking to *review* one is the opposite
+   job — "review my resume" must not be framed as "draft this". */
+const ARTIFACT_DOMAINS = new Set(["write", "email", "code", "create", "image"]);
+
 function detectDomain(text) {
-  for (const [id, re] of SIGS) if (re.test(text)) return id;
+  const r = INTENT ? INTENT.recognize(text) : null;
+  for (const [id, re] of SIGS) {
+    if (!re.test(text)) continue;
+    if (r && r.id === "check" && r.confidence >= 0.6 && ARTIFACT_DOMAINS.has(id)) return "analyze";
+    return id;
+  }
+  if (r && r.confidence >= 0.5 && INTENT_DOMAIN[r.id]) return INTENT_DOMAIN[r.id];
   return "general";
 }
 
@@ -149,6 +167,14 @@ const STRIPS = {
   plan:      /^(help me\s+)?plan(ning)?\s+/i,
   math:      /^(solve|calculate)\s+/i,
   image:     /^(image|picture|logo)\s+of\s+/i,
+};
+
+/* Preconditions, not formatting: information the model simply cannot answer
+   well without. These survive every steer level, including Native — telling a
+   model to ask where you are is not telling it how to write. */
+const NEEDS = {
+  local: "Ask where I am first if it changes the answer.",
+  summarize: "Work only from the text I paste below.",
 };
 
 const AUDIENCE = [
@@ -180,6 +206,7 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   }
   if (!t) return [];
   const segs = [{ text: dom.base(t), add: false, kind: "base" }];
+  if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
   const shape = shapeFor(dom, depth);
   // keep [paste text below] marker at the very end
   const marker = shape.includes("\n\n[paste text below]");
@@ -188,7 +215,8 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
-  if (drill && domId !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
+  if (drill && domId !== "image" && state.steer !== "native")
+    segs.push({ text: DRILL, add: false, kind: "drill" });
   if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
   return segs;
 }
@@ -260,8 +288,9 @@ function score(qEmb, d) {
 
 /* ---------- state ---------- */
 const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [],
-                drill: true, gold: null, reason: "auto", graphOpen: false };
+                drill: true, gold: null, reason: "auto", graphOpen: false, steer: "guided" };
 const REASON = window.PS_REASON;
+const INTENT = window.PS_INTENT;
 
 /* ---------- elements ---------- */
 const $ = id => document.getElementById(id);
@@ -372,7 +401,7 @@ chipsEl.addEventListener("click", e => {
 function reasonSegs(domId) {
   if (!REASON || !state.topic.trim()) return [];
   const m = REASON.analyze(state.topic);
-  const out = REASON.scaffoldFor(m, domId, state.reason)
+  const out = REASON.scaffoldFor(m, domId, state.reason, state.steer === "native" ? "native" : "shaped")
     .map(s => ({ text: s.text, add: true, kind: s.kind }));
   const covered = out.some(s => /my constraints/.test(s.text));
   if (!state.noMulti && m.constraints >= 2 && !covered)
@@ -380,12 +409,47 @@ function reasonSegs(domId) {
   return out;
 }
 
+/* What the user WANTS, stated once — never how to format it. */
+function intentSegs() {
+  if (!INTENT || state.noIntent || !state.topic.trim()) return [];
+  const r = INTENT.recognize(state.topic);
+  const out = [];
+  if (r.line && r.confidence >= 0.4) out.push({ text: r.line, add: true, kind: "intent" });
+  // when the goal genuinely isn't readable, asking beats guessing wrong —
+  // a bare topic ("sourdough") is the clearest case of all
+  else if (r.confidence < 0.35)
+    out.push({ text: INTENT.CLARIFY, add: true, kind: "intent" });
+  return out;
+}
+
+const tidy = t => {
+  const s = t.trim().replace(/\s+/g, " ");
+  return (s.charAt(0).toUpperCase() + s.slice(1)) + (/[.?!]$/.test(s) ? "" : ".");
+};
+
 function currentSegs() {
   const active = MODIFIERS.filter(m => state.mods.has(m.id));
+
+  /* Native: the ask in the user's own words, aimed by intent, then out of the
+     way. No answer shape, no size cap, no follow-up menu — the model answers
+     the way it would answer a person. */
+  if (state.steer === "native") {
+    if (!state.topic.trim()) return [];
+    const domId = state.domain || detectDomain(state.topic);
+    const segs = [{ text: tidy(state.gold ? state.gold.q : state.topic), add: false, kind: "base" }];
+    if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
+    segs.push(...intentSegs());
+    if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
+    for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+    segs.push(...reasonSegs(domId));
+    return segs;
+  }
+
   if (state.gold) {
     // cached hand-tuned prompt for a top query: served as-is, still composable
     const g = state.gold;
     const segs = [{ text: g.p, add: false, kind: "base" }];
+    if (state.steer === "guided") segs.push(...intentSegs());
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
     segs.push(...reasonSegs(g.d));
@@ -395,6 +459,13 @@ function currentSegs() {
   const domId = state.domain || detectDomain(state.topic);
   const segs = buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
   if (!segs.length) return segs;
+  /* Guided: keep the domain's framing and the follow-up menu, but drop the
+     answer-shape sentence and its size caps — say what's wanted, not how long
+     the reply may be. */
+  if (state.steer === "guided") {
+    for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
+    segs.splice(1, 0, ...intentSegs());
+  }
   // reasoning goes before the go-deeper menu and the paste marker
   const at = segs.findIndex(s => s.kind === "drill" || s.kind === "marker");
   const rs = reasonSegs(domId);
@@ -407,6 +478,8 @@ const SEG_HINTS = {
   aud: "Click to remove",
   mod: "Click to remove",
   multi: "Click to remove",
+  intent: "What the app thinks you want — click to remove",
+  need: "Click to remove",
   reason: "Added by the reasoning layer — click to turn reasoning off",
   verify: "Added by the reasoning layer — click to turn reasoning off",
   drill: "Click to remove the go-deeper menu",
@@ -441,7 +514,11 @@ function renderMetrics() {
   const spent = state.reason === "off" ? "no reasoning spent"
     : REASON.scaffoldFor(m, state.domain || detectDomain(state.topic), state.reason).length
       ? "reasoning spent" : "no reasoning needed";
-  metricsEl.innerHTML =
+  const r = INTENT ? INTENT.recognize(state.topic) : null;
+  const wants = r && r.confidence >= 0.4
+    ? `<span class="want">wants: ${r.label}</span>`
+    : `<span class="want">goal unclear — will ask</span>`;
+  metricsEl.innerHTML = wants +
     `<button class="cx" data-l="${m.level}" type="button" title="Click to see the intent graph">` +
     `L${m.level} ${REASON.LEVEL_NAME[m.level]}</button>` +
     `<span>${m.why} · ${m.V} ${m.V === 1 ? "node" : "nodes"}, ${m.E} ${m.E === 1 ? "link" : "links"} · ${spent}</span>`;
@@ -493,6 +570,8 @@ promptEl.addEventListener("click", e => {
   else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; $("toneOut").textContent = toneLabels[1]; }
   else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); $("depthOut").textContent = depthLabels[state.depth]; }
   else if (seg.kind === "multi") state.noMulti = true;
+  else if (seg.kind === "intent") state.noIntent = true;
+  else if (seg.kind === "need") state.noNeed = true;
   else if (seg.kind === "reason" || seg.kind === "verify") { state.reason = "off"; syncReasonUI(); }
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
   update();
@@ -542,6 +621,8 @@ q.addEventListener("input", () => {
   state.domain = null;          // re-detect while free-typing
   state.gold = null;            // typing leaves the cached prompt
   state.noMulti = false;
+  state.noIntent = false;
+  state.noNeed = false;
   state.matches = findMatches(q.value);
   state.sel = state.matches.length ? 0 : -1;
   renderSug(); renderChips(); update();
@@ -584,6 +665,29 @@ function syncDrillUI() {
 }
 $("drill").addEventListener("click", () => { state.drill = !state.drill; syncDrillUI(); update(); });
 syncDrillUI();
+
+/* steer: how much the prompt is allowed to shape the model's reply */
+const STEER_MODES = ["native", "guided", "shaped"];
+const STEER_LABEL = { native: "Native", guided: "Guided", shaped: "Shaped" };
+const STEER_HINT = {
+  native: "model's own voice",
+  guided: "say what I want",
+  shaped: "fix the answer's form",
+};
+function syncSteerUI() {
+  $("steer").textContent = STEER_LABEL[state.steer];
+  $("steerOut").textContent = STEER_HINT[state.steer];
+  // Depth only means anything when the prompt is shaping the answer
+  $("depthWrap").style.display = state.steer === "shaped" ? "" : "none";
+  // so does the follow-up menu
+  $("drill").disabled = state.steer === "native";
+  $("drill").style.opacity = state.steer === "native" ? ".4" : "";
+}
+$("steer").addEventListener("click", () => {
+  state.steer = STEER_MODES[(STEER_MODES.indexOf(state.steer) + 1) % STEER_MODES.length];
+  syncSteerUI(); update();
+});
+syncSteerUI();
 
 /* reasoning mode: auto (spend only when the structure earns it) → always → off */
 const REASON_MODES = ["auto", "force", "off"];
