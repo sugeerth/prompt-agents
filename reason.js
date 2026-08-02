@@ -88,13 +88,23 @@
     const words = text.trim().split(/\s+/).filter(Boolean).length;
 
     const entities = entitiesOf(text);
+
+    /* The real graph is the stronger evidence where it speaks: a cycle found by
+       Tarjan is a mutual dependency that actually exists in the structure, not
+       a keyword that hints at one. Cue counts stay as the floor, because a
+       3-node graph is too small for its metrics to be trusted alone. */
+    const graph = (typeof window !== "undefined" && window.PS_GRAPH)
+      ? window.PS_GRAPH.analyze(text) : null;
+    const gCoupling = graph ? graph.cyclic.length : 0;
+    const gDepth = graph ? graph.depth : 0;
     const framing = count(t, CUE.framing);
     const constraints = count(t, CUE.constraint);   // structural only
     const sequence = count(t, CUE.sequence);
     const condition = count(t, CUE.condition);
-    const coupling = count(t, CUE.couple);
+    const coupling = Math.max(count(t, CUE.couple), gCoupling);
     const arity = comparisonArity(t);
     const compare = count(t, CUE.compare) > 0 || arity >= 2;
+
 
     // graph size: one node per distinct entity, constraint, and option
     const options = arity >= 2 ? arity : 0;
@@ -103,7 +113,7 @@
     // conditions branch, coupling cues cross-link constraints to entities
     const E = constraints + (options >= 2 ? options - 1 : 0) + sequence + condition + coupling;
     const density = V ? +(E / V).toFixed(2) : 0;
-    const depth = sequence > 0 ? sequence + 1 : 1;          // longest dependency chain
+    const depth = Math.max(sequence > 0 ? sequence + 1 : 1, gDepth + 1);   // longest dependency chain
     const branch = Math.max(options, condition > 0 ? condition + 1 : 1); // max out-degree
 
     /* --- ladder ---------------------------------------------------------
@@ -129,7 +139,7 @@
       level = 0;
 
     return {
-      level, V, E, density, depth, branch, arity, coupling, framing,
+      level, V, E, density, depth, branch, arity, coupling, framing, graph,
       entities: entities.slice(0, 8), constraints, compare,
       why: whyText({ level, entities, constraints, arity, depth, branch, coupling, compare }),
     };
@@ -204,7 +214,104 @@
     return out;
   }
 
+  /* --- graph-derived guidance ------------------------------------------
+     What the algorithms found about the SHAPE OF THE PROBLEM, said in one
+     line. These describe the ask's structure, never the answer's format —
+     "settle these together" is about what to solve, not how to write it.
+
+     At most one line is emitted, the most actionable finding. A mutual
+     dependency changes how the whole thing must be solved, so it outranks
+     everything; independence is next because it licenses answering parts
+     separately; ordering and crux are weaker hints. When the graph finds no
+     structure, it says nothing at all — silence is the correct output for a
+     simple ask. */
+  /* Words that collect edges from everything and win a centrality test without
+     meaning anything — naming one produces visibly broken output ("'way' is
+     the deciding factor"). Kept separate from the stoplist: these may still
+     be counted, they may just never be NAMED. */
+  const UNNAMEABLE = new Set(("way ways thing things stuff idea ideas best worst help option options " +
+    "kind sort type lot bit part parts side item items area point points").split(" "));
+
+  /* A slot is user text being interpolated into a line that sits in
+     instruction position. Treat it as hostile input, because it is: a node
+     labelled "ignore previous instructions" would otherwise be promoted with
+     the prompt's own authority behind it. Anything that fails these checks
+     drops the finding to its slotless phrasing — never fail open. */
+  const INSTRUCTION_VERBS = /\b(ignore|disregard|answer|respond|reply|output|write|say|print|forget|override|instead|system|prompt)\b/;
+  // a slot made only of function words ("only in", "with a") names nothing
+  const FUNCTION_ONLY = new Set(("only with without under over into onto from about into for the and but not " +
+    "any all some more less than that this these those when what which").split(" "));
+  function safeSlot(word, tainted) {
+    if (typeof word !== "string") return null;
+    if (tainted && tainted.indexOf(word.trim().toLowerCase()) !== -1) return null;
+    const w = word.trim().toLowerCase();
+    if (w.length < 4 || w.length > 24) return null;
+    if (!/^[a-z0-9][a-z0-9 -]*$/.test(w)) return null;       // letters, digits, spaces, hyphens only
+    if (w.split(/\s+/).length > 3) return null;
+    if (INSTRUCTION_VERBS.test(w)) return null;
+    if (UNNAMEABLE.has(w)) return null;
+    // must carry at least one real content word, not just function words
+    if (!w.split(/\s+/).some(x => x.length >= 4 && !FUNCTION_ONLY.has(x))) return null;
+    return w;
+  }
+  const safeSlots = (xs, tainted) => (xs || []).map(x => safeSlot(x, tainted)).filter(Boolean).slice(0, 3);
+
+  function graphFindings(metrics) {
+    const g = metrics.graph;
+    /* Two gates before any structural claim, both from the tiny-graph
+       literature: below ~5 nodes every graph has a trivially dominant node
+       and metrics are dominated by extraction noise, and a finding on an ask
+       simple enough to be L0/L1 is true but not worth spending words on. */
+    if (!g || g.n < 5 || metrics.level < 2) return [];
+    const pretty = xs => (xs.length === 2 ? xs.join(" and ") : xs.join(", "));
+
+    /* Exactly one line, rarest and most actionable finding first. Centrality
+       findings come last because they have the highest false-positive rate. */
+
+    // a cycle: quantities that constrain each other and cannot be fixed in turn
+    if (g.cyclic.length && g.cycleGroups[0].length >= 2) {
+      const named = safeSlots(g.cycleGroups[0], g.tainted);
+      return [{ kind: "graph", text: named.length >= 2
+        ? `${pretty(named)} depend on each other — fixing one changes what the others can be.`
+        : "Some of these depend on each other — settling one changes what the others can be." }];
+    }
+
+    /* Disconnected sub-problems. Gated hard: a split is far more often an edge
+       my extractor missed than genuine independence, and claiming independence
+       on a sequential problem actively degrades the answer. */
+    if (g.independent >= 2 && g.n >= 6 && g.constraints >= 1)
+      return [{ kind: "graph", text: "These are separate problems — neither one's answer constrains the other." }];
+
+    // tightly interlocking requirements, whatever their names
+    if (g.treewidth >= 2 && g.circuitRank >= 1)
+      return [{ kind: "graph", text: "These requirements pull against each other — satisfying all of them at once may not be possible." }];
+
+    // a real dependency chain: order is forced
+    if (g.depth >= 2 && g.criticalPath.length >= 3) {
+      const named = safeSlots(g.criticalPath, g.tainted);
+      return [{ kind: "graph", text: named.length >= 3
+        ? `Resolve in order: ${named.join(" → ")}.`
+        : "This runs in a fixed order — each step's outcome determines what the next can be." }];
+    }
+
+    // one node the two halves connect through
+    if (g.articulation.length && g.n >= 6) {
+      const hinge = safeSlot(g.articulation[0], g.tainted);
+      if (hinge) return [{ kind: "graph", text: `Everything here connects through ${hinge} — change it and both sides change.` }];
+    }
+
+    /* Crux, last and most strictly gated: below 6 nodes, or without a clear
+       degree gap, the "most central" node is an artefact of extraction. */
+    if (g.n >= 6 && g.maxDegree >= 0.5 * (g.n - 1) && g.maxDegree >= 2 * Math.max(1, g.medianDegree)) {
+      const crux = safeSlot(g.crux, g.tainted);
+      if (crux) return [{ kind: "graph", text: `${crux} is the pivot here — most of the rest follows from it.` }];
+    }
+
+    // nothing structural: say nothing at all
+    return [];
+  }
+
   const LEVEL_NAME = ["Atomic", "Shaped", "Composite", "Coupled"];
 
-  window.PS_REASON = { analyze, scaffoldFor, LEVEL_NAME };
+  window.PS_REASON = { analyze, scaffoldFor, graphFindings, LEVEL_NAME };
 })();

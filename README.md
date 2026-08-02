@@ -83,14 +83,51 @@ costs more than a round trip.
 The newest mode. Instead of treating every ask the same, the app models it as a
 small **intent graph** and spends reasoning in proportion to that graph's shape.
 
-- **Nodes** — entities (what the ask is about), constraints (what bounds it),
-  options (what's being chosen between).
-- **Edges** — CONSTRAIN, COMPARE, SEQUENCE (dependency depth), CONDITION
-  (branching), COUPLE (one constraint pulling on several entities at once —
-  the real driver of difficulty).
-- **Metrics → ladder** — node/edge counts, density, longest dependency path,
-  max out-degree, comparison arity and constraint coupling place the ask on a
-  4-level ladder: **L0 Atomic · L1 Shaped · L2 Composite · L3 Coupled**.
+It is a real graph with real algorithms (`graph.js`), not a keyword tally.
+
+- **Nodes** — entities (what the ask is about), constraints (what bounds it).
+- **Edges** — CONSTRAIN, SEQUENCE (ordering), CONDITION (branching), COUPLE
+  (encoded in *both* directions, so a mutual constraint becomes a genuine
+  cycle that the algorithm discovers rather than a regex asserting it).
+- **Algorithms** — Tarjan SCC (mutually constraining quantities), topological
+  sort + longest path over the cycle condensation (the forced order of
+  dependent steps), PageRank (the crux), connected components (genuinely
+  separate sub-problems), Hopcroft–Tarjan articulation points (the hinge),
+  transitive reduction (removing implied edges before anything counts them),
+  and a min-degree **treewidth** bound.
+- **Metrics → ladder** — placed on **L0 Atomic · L1 Shaped · L2 Composite ·
+  L3 Coupled**. Treewidth and circuit rank (`E − V + components`) carry the
+  most weight because they are integer invariants: on a 5-node graph one extra
+  cue match swings density by 0.2 and can flip a level, while treewidth moves
+  by whole units or not at all. Treewidth is also the only metric that
+  separates five constraints *in a chain* (width 1, easy) from five that all
+  touch each other (width ≥3, genuinely hard) — the distinction CSP
+  tractability theory (Freuder 1985/1990; Dechter & Pearl 1989) says is the
+  real source of difficulty.
+
+**What the graph says out loud.** At most one line, describing the structure of
+the *problem* and never the form of the answer:
+
+> *small, family, under 20k depend on each other — fixing one changes what the others can be.*
+> *Resolve in order: bug → deploy → notify.*
+
+If it finds nothing structural it says nothing at all. It fires on 13% of the
+eval corpus by design: a missed finding costs nothing, while a false one
+actively damages the answer, so the gates favour precision over recall.
+
+**Slots are treated as hostile input.** A node label is user text being
+interpolated into instruction position, so markup is stripped before parsing,
+anything extracted from a clause that reads like an injected instruction may be
+counted but never *named*, and every slot must pass a character, length and
+denylist check. Anything that fails drops to a slotless phrasing — it never
+fails open.
+
+**Deliberately not implemented:** Tree/Graph-of-Thoughts search (needs a
+controller loop; a single prompt buys the vocabulary of search with none of the
+backtracking), knowledge-graph methods (Think-on-Graph, RoG — need a KG and a
+retrieval step), trained GNN prompting, and Leiden/modularity community
+detection, which is numerically degenerate on an 8-node graph. Connected
+components is what that degrades to at this scale, so it is what we use.
 
 What each level buys:
 
