@@ -225,38 +225,89 @@
      separately; ordering and crux are weaker hints. When the graph finds no
      structure, it says nothing at all — silence is the correct output for a
      simple ask. */
+  /* Words that collect edges from everything and win a centrality test without
+     meaning anything — naming one produces visibly broken output ("'way' is
+     the deciding factor"). Kept separate from the stoplist: these may still
+     be counted, they may just never be NAMED. */
+  const UNNAMEABLE = new Set(("way ways thing things stuff idea ideas best worst help option options " +
+    "kind sort type lot bit part parts side item items area point points").split(" "));
+
+  /* A slot is user text being interpolated into a line that sits in
+     instruction position. Treat it as hostile input, because it is: a node
+     labelled "ignore previous instructions" would otherwise be promoted with
+     the prompt's own authority behind it. Anything that fails these checks
+     drops the finding to its slotless phrasing — never fail open. */
+  const INSTRUCTION_VERBS = /\b(ignore|disregard|answer|respond|reply|output|write|say|print|forget|override|instead|system|prompt)\b/;
+  // a slot made only of function words ("only in", "with a") names nothing
+  const FUNCTION_ONLY = new Set(("only with without under over into onto from about into for the and but not " +
+    "any all some more less than that this these those when what which").split(" "));
+  function safeSlot(word, tainted) {
+    if (typeof word !== "string") return null;
+    if (tainted && tainted.indexOf(word.trim().toLowerCase()) !== -1) return null;
+    const w = word.trim().toLowerCase();
+    if (w.length < 4 || w.length > 24) return null;
+    if (!/^[a-z0-9][a-z0-9 -]*$/.test(w)) return null;       // letters, digits, spaces, hyphens only
+    if (w.split(/\s+/).length > 3) return null;
+    if (INSTRUCTION_VERBS.test(w)) return null;
+    if (UNNAMEABLE.has(w)) return null;
+    // must carry at least one real content word, not just function words
+    if (!w.split(/\s+/).some(x => x.length >= 4 && !FUNCTION_ONLY.has(x))) return null;
+    return w;
+  }
+  const safeSlots = (xs, tainted) => (xs || []).map(x => safeSlot(x, tainted)).filter(Boolean).slice(0, 3);
+
   function graphFindings(metrics) {
     const g = metrics.graph;
-    if (!g || g.n < 3) return [];
-    /* Only name things worth naming. A label the user would not recognise as
-       one of their own words is noise, and noise in a prompt is worse than
-       silence — so an unnameable finding falls back to the generic phrasing
-       rather than listing fragments. */
-    const nameable = xs => xs.filter(x => x.length >= 4 && !/^\d+$/.test(x)).slice(0, 3);
+    /* Two gates before any structural claim, both from the tiny-graph
+       literature: below ~5 nodes every graph has a trivially dominant node
+       and metrics are dominated by extraction noise, and a finding on an ask
+       simple enough to be L0/L1 is true but not worth spending words on. */
+    if (!g || g.n < 5 || metrics.level < 2) return [];
     const pretty = xs => (xs.length === 2 ? xs.join(" and ") : xs.join(", "));
+
+    /* Exactly one line, rarest and most actionable finding first. Centrality
+       findings come last because they have the highest false-positive rate. */
 
     // a cycle: quantities that constrain each other and cannot be fixed in turn
     if (g.cyclic.length && g.cycleGroups[0].length >= 2) {
-      const named = nameable(g.cycleGroups[0]);
+      const named = safeSlots(g.cycleGroups[0], g.tainted);
       return [{ kind: "graph", text: named.length >= 2
-        ? `${pretty(named)} constrain each other — settle them together.`
-        : "Several of these constraints pull against each other — settle them together." }];
+        ? `${pretty(named)} depend on each other — fixing one changes what the others can be.`
+        : "Some of these depend on each other — settling one changes what the others can be." }];
     }
 
-    // disconnected sub-problems: nothing links them, so they can be answered apart
-    if (g.independent >= 2 && g.n >= 5)
-      return [{ kind: "graph", text: "These parts are independent — resolve them separately, then combine." }];
+    /* Disconnected sub-problems. Gated hard: a split is far more often an edge
+       my extractor missed than genuine independence, and claiming independence
+       on a sequential problem actively degrades the answer. */
+    if (g.independent >= 2 && g.n >= 6 && g.constraints >= 1)
+      return [{ kind: "graph", text: "These are separate problems — neither one's answer constrains the other." }];
 
-    // a real dependency chain: order matters
-    if (g.depth >= 2 && g.criticalPath.length >= 2)
-      return [{ kind: "graph", text: `Resolve in order: ${g.criticalPath.slice(0, 3).join(" → ")}.` }];
+    // tightly interlocking requirements, whatever their names
+    if (g.treewidth >= 2 && g.circuitRank >= 1)
+      return [{ kind: "graph", text: "These requirements pull against each other — satisfying all of them at once may not be possible." }];
 
-    // one node the rest of the ask hangs off, and it stands clear of the field
-    if (g.articulation.length && g.n >= 6)
-      return [{ kind: "graph", text: `Everything here hinges on ${g.articulation[0]} — settle that first.` }];
-    if (g.crux && g.cruxMargin >= 0.06 && g.n >= 5)
-      return [{ kind: "graph", text: `${g.crux} is the deciding factor — start there.` }];
+    // a real dependency chain: order is forced
+    if (g.depth >= 2 && g.criticalPath.length >= 3) {
+      const named = safeSlots(g.criticalPath, g.tainted);
+      return [{ kind: "graph", text: named.length >= 3
+        ? `Resolve in order: ${named.join(" → ")}.`
+        : "This runs in a fixed order — each step's outcome determines what the next can be." }];
+    }
 
+    // one node the two halves connect through
+    if (g.articulation.length && g.n >= 6) {
+      const hinge = safeSlot(g.articulation[0], g.tainted);
+      if (hinge) return [{ kind: "graph", text: `Everything here connects through ${hinge} — change it and both sides change.` }];
+    }
+
+    /* Crux, last and most strictly gated: below 6 nodes, or without a clear
+       degree gap, the "most central" node is an artefact of extraction. */
+    if (g.n >= 6 && g.maxDegree >= 0.5 * (g.n - 1) && g.maxDegree >= 2 * Math.max(1, g.medianDegree)) {
+      const crux = safeSlot(g.crux, g.tainted);
+      if (crux) return [{ kind: "graph", text: `${crux} is the pivot here — most of the rest follows from it.` }];
+    }
+
+    // nothing structural: say nothing at all
     return [];
   }
 

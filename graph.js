@@ -186,6 +186,68 @@
     return isArt.map((a, i) => (a ? i : -1)).filter(i => i !== -1);
   }
 
+  /* Transitive reduction: drop edge u→v when u reaches v another way.
+     Cue-based extraction produces transitively-implied ordering edges, and
+     leaving them in inflates edge count, circuit rank and path length alike.
+     Run before any metric that counts edges. */
+  function transitiveReduction(n, adj) {
+    const reach = (from, banned) => {
+      const seen = new Array(n).fill(false);
+      const stack = [from];
+      seen[from] = true;
+      while (stack.length) {
+        const v = stack.pop();
+        for (const w of adj[v] || []) {
+          if (v === banned[0] && w === banned[1]) continue;   // ignore the edge itself
+          if (!seen[w]) { seen[w] = true; stack.push(w); }
+        }
+      }
+      return seen;
+    };
+    const out = adj.map(a => (a || []).slice());
+    for (let u = 0; u < n; u++) {
+      for (const v of (adj[u] || []).slice()) {
+        if (reach(u, [u, v])[v]) out[u] = out[u].filter(x => x !== v);
+      }
+    }
+    return out;
+  }
+
+  /* Treewidth upper bound by min-degree elimination.
+
+     The single best structural predictor of difficulty, from the CSP
+     tractability literature (Freuder 1985/1990; Dechter & Pearl 1989):
+     constraint problems of bounded treewidth are tractable, and difficulty
+     comes from the SHAPE of the constraint graph, not the number of
+     constraints. It is the only metric here that separates five constraints
+     in a chain (width 1, easy) from five constraints all touching each other
+     (width >= 3, genuinely hard). Exact treewidth is NP-hard; this heuristic
+     upper bound is what we actually want. */
+  function treewidth(n, adj) {
+    if (n < 2) return 0;
+    const nbr = Array.from({ length: n }, () => new Set());
+    for (let v = 0; v < n; v++) for (const w of adj[v] || []) { nbr[v].add(w); nbr[w].add(v); }
+    const alive = new Array(n).fill(true);
+    let width = 0;
+    for (let step = 0; step < n; step++) {
+      let pick = -1;
+      for (let v = 0; v < n; v++) {
+        if (!alive[v]) continue;
+        if (pick === -1 || nbr[v].size < nbr[pick].size) pick = v;
+      }
+      if (pick === -1) break;
+      width = Math.max(width, nbr[pick].size);
+      // eliminating a node makes its neighbours a clique
+      const ns = [...nbr[pick]].filter(x => alive[x]);
+      for (let i = 0; i < ns.length; i++) {
+        for (let j = i + 1; j < ns.length; j++) { nbr[ns[i]].add(ns[j]); nbr[ns[j]].add(ns[i]); }
+      }
+      alive[pick] = false;
+      for (const x of ns) nbr[x].delete(pick);
+    }
+    return width;
+  }
+
   /* ===================== text → graph ===================== */
 
   const STOP = new Set(("a an the my our your his her its their this that these those i me we us you he she it they " +
@@ -206,7 +268,7 @@
     /\bunder \$?\d+\w*/g, /\bover \$?\d+\w*/g, /\bless than \w+/g, /\bat least \w+/g, /\bat most \w+/g,
     /\bno more than \w+/g, /\bbudget\b/g, /\bcheap\b/g, /\bfree\b/g, /\btight\b/g, /\bsmall\b/g,
     /\bquick(ly)?\b/g, /\bfast\b/g, /\bwithin \w+/g, /\bin \d+ (day|week|month|hour|minute|year)s?\b/g,
-    /\bwithout \w+/g, /\bavoid \w+/g, /\bonly \w+/g, /\bmust \w+/g,
+    /\bwithout \w{4,}/g, /\bavoid \w{4,}/g, /\bmust \w{4,}/g,
     /\bkids?\b/g, /\bchildren\b/g, /\btoddlers?\b/g, /\bfamily\b/g,
     /\bvegan\b/g, /\bvegetarian\b/g, /\bgluten.?free\b/g, /\bnut allergy\b/g,
     /\bremote\b/g, /\bpart.?time\b/g, /\bfull.?time\b/g, /\blow.?carb\b/g,
@@ -226,8 +288,14 @@
 
   const stem = w => w.replace(/(ies|ing|ed|s)$/, "").toLowerCase();
 
+  /* A clause that reads like an injected instruction: anything extracted from
+     it may still be COUNTED (it is text the user typed) but may never be
+     NAMED, because naming promotes it into instruction position. */
+  const INSTRUCTION_CLAUSE = /\b(ignore|disregard|answer|respond|reply|output|print|forget|override|system|prompt|instructions?)\b/;
+
   function build(text) {
-    const raw = text.trim().replace(/\s+/g, " ");
+    // markup is not part of the ask; its contents must never become nodes
+    const raw = text.trim().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
     const lower = raw.toLowerCase();
 
     const nodes = [];          // { id, type, label }
@@ -277,11 +345,15 @@
     const constraintWords = new Set();
     for (const s of constraintSpans) for (const w of s.split(/\s+/)) constraintWords.add(stem(w));
 
-    const clauseEntities = clauses.map(clause => {
+    const tainted = new Set();
+    const clauseEntities = clauses.map((clause, ci) => {
+      const suspect = INSTRUCTION_CLAUSE.test(clause);
       const ids = [];
       for (const w of clause.replace(/[^a-z0-9$\s]/g, " ").split(/\s+/)) {
         if (w.length <= 2 || STOP.has(w) || constraintWords.has(stem(w)) || /^\d+$/.test(w)) continue;
-        ids.push(addNode(w, "entity"));
+        const id = addNode(w, "entity");
+        if (suspect) tainted.add(w);
+        ids.push(id);
       }
       return ids;
     });
@@ -313,20 +385,26 @@
     /* COUPLE: "balance X against Y" means X constrains Y AND Y constrains X.
        Encoding both directions is what makes Tarjan find a real 2-cycle — the
        mutual dependency is discovered by the algorithm, not asserted by a regex. */
-    const coupled = COUPLE_RE.some(re => re.test(lower));
-    if (coupled) {
-      const ents = clauseEntities.flat();
-      const cons = clauseConstraints.flat();
-      const pool = (cons.length >= 2 ? cons : ents).slice(0, 4);
+    clauses.forEach((clause, ci) => {
+      if (!COUPLE_RE.some(re => re.test(clause))) return;
+      /* Couple only what sits beside the cue — this clause and the one it
+         joins to. A cue anywhere in the ask must not clique together nodes
+         from unrelated parts of it; that manufactures mutual dependencies,
+         and the mutual-dependency line is the highest-confidence thing this
+         layer can say. */
+      const local = [].concat(
+        clauseConstraints[ci] || [], clauseEntities[ci] || [],
+        clauseConstraints[ci + 1] || [], clauseEntities[ci + 1] || []);
+      const pool = [...new Set(local)].slice(0, 4);
       for (let i = 0; i < pool.length; i++) {
         for (let j = i + 1; j < pool.length; j++) {
           addEdge(pool[i], pool[j], "couple");
           addEdge(pool[j], pool[i], "couple");
         }
       }
-    }
+    });
 
-    return { nodes, edges, clauses };
+    return { nodes, edges, clauses, tainted: [...tainted] };
   }
 
   /* ===================== analysis ===================== */
@@ -376,10 +454,22 @@
     const degree = new Array(n).fill(0);
     for (const e of g.edges) { degree[e.from]++; degree[e.to]++; }
     const maxDegree = degree.length ? Math.max(...degree) : 0;
+    const sortedDeg = [...degree].sort((a, b) => a - b);
+    const medianDegree = n ? sortedDeg[Math.floor(n / 2)] : 0;
+
+    /* Integer invariants, which stay stable at the scale where ratios do not:
+       on a 5-node graph one extra cue match swings density by 0.2 and can flip
+       a level, but circuit rank and treewidth move by whole units or not at all. */
+    const reduced = transitiveReduction(n, adj);
+    const reducedEdges = reduced.reduce((s, a) => s + a.length, 0);
+    const allComponents = components(n, adj).length;
+    const circuitRank = Math.max(0, reducedEdges - n + allComponents);
+    const tw = treewidth(n, adj);
 
     return {
       nodes: g.nodes, edges: g.edges,
-      n, m: g.edges.length, density, maxDegree,
+      n, m: g.edges.length, density, maxDegree, medianDegree,
+      circuitRank, treewidth: tw,
       sccs, cyclic,
       cycleGroups: cyclic.map(c => c.map(v => g.nodes[v].label)),
       depth: critical.length,
@@ -389,12 +479,14 @@
       crux: crux >= 0 ? g.nodes[crux].label : null,
       cruxMargin: +cruxMargin.toFixed(3),
       articulation: arts.map(v => g.nodes[v].label),
+      tainted: g.tainted,
       constraints: g.nodes.filter(x => x.type === "constraint").length,
       entities: g.nodes.filter(x => x.type === "entity").map(x => x.label),
     };
   }
 
-  const api = { build, analyze, tarjanSCC, longestPath, pageRank, components, articulationPoints, adjacency };
+  const api = { build, analyze, tarjanSCC, longestPath, pageRank, components,
+                articulationPoints, adjacency, transitiveReduction, treewidth };
   if (typeof window !== "undefined") window.PS_GRAPH = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })();

@@ -98,6 +98,44 @@ console.log('Articulation points');
   eq(G.articulationPoints(3, [[1], [2], [0]]), [], 'a cycle has no articulation point');
 }
 
+/* ---------- transitive reduction ---------- */
+console.log('Transitive reduction');
+{
+  // 0→1→2 plus the shortcut 0→2: the shortcut is implied and must go
+  const r = G.transitiveReduction(3, [[1, 2], [2], []]);
+  eq(r[0], [1], 'drops the implied shortcut edge');
+  eq(r[1], [2], 'keeps the edges that carry the path');
+}
+{
+  const r = G.transitiveReduction(3, [[1], [2], [0]]);   // a cycle implies everything
+  const kept = r.reduce((s, a) => s + a.length, 0);
+  if (kept > 3) fail('reduction added edges to a cycle');
+  else ok('a cycle survives reduction without gaining edges');
+}
+
+/* ---------- treewidth ---------- */
+console.log('Treewidth (min-degree elimination)');
+{
+  // a path/tree has treewidth 1 — a chain of constraints is easy
+  eq(G.treewidth(4, [[1], [2], [3], []]), 1, 'a chain has treewidth 1');
+}
+{
+  // K4: every node touches every other — genuinely coupled
+  const k4 = [[1, 2, 3], [2, 3], [3], []];
+  if (G.treewidth(4, k4) < 3) fail('K4 treewidth under-reported: ' + G.treewidth(4, k4));
+  else ok('a clique of 4 has treewidth 3');
+}
+{
+  // this is the distinction density cannot make
+  const chain = G.treewidth(5, [[1], [2], [3], [4], []]);
+  const clique = G.treewidth(5, [[1, 2, 3, 4], [2, 3, 4], [3, 4], [4], []]);
+  if (!(clique > chain)) fail(`treewidth failed to separate chain (${chain}) from clique (${clique})`);
+  else ok(`separates 5 constraints in a chain (tw=${chain}) from 5 all touching (tw=${clique})`);
+}
+{
+  eq(G.treewidth(1, [[]]), 0, 'a single node has treewidth 0');
+}
+
 /* ---------- graph built from real asks ---------- */
 console.log('Graphs from real asks');
 {
