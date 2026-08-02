@@ -38,8 +38,8 @@ const ok = m => console.log('  ok:', m);
   await page.fill('#q', ''); await page.fill('#q', 'best tacos near me');
   await page.keyboard.press('Escape');
   let t = await text();
-  if (!t.startsWith('Recommend:') || !t.includes('location')) fail('local domain not applied: ' + t);
-  else ok('near-me asks use the Nearby domain (asks location, table shape)');
+  if (!t.startsWith('Recommend:') || !/where I am|location/i.test(t)) fail('local domain not applied: ' + t);
+  else ok('near-me asks use the Nearby domain and ask where the user is');
 
   // 4. compound ask gets the constraint guard, click removes it
   await page.fill('#q', ''); await page.fill('#q', '10 days in japan with kids on a budget');

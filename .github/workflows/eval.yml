@@ -10,7 +10,7 @@ jobs:
   # Fast gate: the reasoning ladder is scored against a labelled corpus and
   # its invariants are checked. No browser, runs in seconds.
   reasoning:
-    name: reasoning ladder eval
+    name: reasoning + intent evals
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +19,8 @@ jobs:
           node-version: "20"
       - name: Score the complexity ladder
         run: node tests/reasoning-eval.js
+      - name: Score intent recognition
+        run: node tests/intent-eval.js
 
   # Full behaviour: the app is driven in a real browser.
   ui:
@@ -41,3 +43,5 @@ jobs:
         run: node tests/ui-similarity.js
       - name: Reasoning layer
         run: node tests/ui-reasoning.js
+      - name: Steer + intent
+        run: node tests/ui-steer.js
