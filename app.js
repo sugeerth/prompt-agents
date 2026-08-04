@@ -491,7 +491,14 @@ const SEG_HINTS = {
   drill: "Click to remove the go-deeper menu",
 };
 
+function syncExamples() {
+  // looked up lazily: update() runs during init, before the examples row renders
+  const el = document.getElementById("examples");
+  if (el) el.style.display = state.topic.trim() ? "none" : "flex";
+}
+
 function update() {
+  syncExamples();
   const segs = currentSegs();
   if (!segs.length) {
     promptEl.className = "empty";
@@ -524,10 +531,12 @@ function renderMetrics() {
   const wants = r && r.confidence >= 0.4
     ? `<span class="want">wants: ${r.label}</span>`
     : `<span class="want">goal unclear — will ask</span>`;
+  /* three plain pills; the graph detail (topics, constraints, node counts)
+     waits behind the badge for whoever actually wants it */
   metricsEl.innerHTML = wants +
-    `<button class="cx" data-l="${m.level}" type="button" title="Click to see the intent graph">` +
+    `<button class="cx" data-l="${m.level}" type="button" title="How complex this ask is — click to see why">` +
     `L${m.level} ${REASON.LEVEL_NAME[m.level]}</button>` +
-    `<span>${m.why} · ${m.V} ${m.V === 1 ? "node" : "nodes"}, ${m.E} ${m.E === 1 ? "link" : "links"} · ${spent}</span>`;
+    `<span>${spent}</span>`;
   if (state.graphOpen) drawGraph(m); else graphEl.classList.remove("open");
 }
 
@@ -543,6 +552,9 @@ function drawGraph(m) {
   const W = 560, H = 150, cx = W / 2, cy = H / 2;
   const ents = m.entities.slice(0, 6);
   const parts = [];
+  const g = m.graph;
+  parts.push(`<div style="font-size:12px;color:var(--muted);padding-bottom:2px">${m.why}` +
+    (g ? ` · ${g.n} ${g.n === 1 ? "node" : "nodes"}, ${g.m} ${g.m === 1 ? "link" : "links"}` : "") + `</div>`);
   parts.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="intent graph">`);
   const R = 52;
   ents.forEach((word, i) => {
@@ -717,6 +729,35 @@ $("vocabnote").textContent = VOCAB.length
   ? VOCAB.length + " starter ideas" + (GOLD.length ? " + " + GOLD.length + " hand-tuned top prompts" : "") + " built in."
   : "";
 renderChips(); update();
+
+/* ---------- first-run intuitiveness: show, don't explain ---------- */
+
+/* One example per flavour of ask — tapping one demonstrates the whole app
+   faster than any copy could. Shown only while the box is empty. */
+const EXAMPLES = [
+  "explain machine learning",
+  "10 days in japan with kids on a tight budget",
+  "fix my resume",
+  "best tacos near me",
+];
+const examplesEl = $("examples");
+examplesEl.innerHTML = `<span class="exlabel">Try one:</span>` +
+  EXAMPLES.map(e => `<button class="chip" type="button">${e}</button>`).join("");
+examplesEl.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  q.value = b.textContent;
+  q.dispatchEvent(new Event("input"));
+  state.matches = []; renderSug();
+  q.focus();
+});
+
+/* the expert controls live behind one calm disclosure */
+const tuneEl = $("tune"), tuneBtn = $("tunebtn");
+tuneBtn.addEventListener("click", () => {
+  const open = tuneEl.classList.toggle("open");
+  tuneBtn.textContent = open ? "Fine-tune ▾" : "Fine-tune ▸";
+  tuneBtn.setAttribute("aria-expanded", String(open));
+});
 
 /* deep link: #t=<topic>, applied on load and on hash change */
 function applyHash() {
