@@ -20,17 +20,17 @@ const ok = m => console.log('  ok:', m);
   // 1. four tabs in plain language, each carrying its formal name
   const tabs = await page.locator('.tab').allInnerTexts();
   const plain = tabs.map(t => t.split('\n')[0]).join(',');
-  if (plain !== 'The lucky win,Off the chart,Coached,Cheating')
+  if (plain !== 'The lucky win,Off the chart,Coached')
     fail('plain tab names wrong: ' + plain);
   else ok('tabs speak plain language');
   const acs = tabs.join(' ').toLowerCase();
-  for (const term of ['regressional', 'extremal', 'causal', 'adversarial']) {
+  for (const term of ['regressional', 'extremal', 'causal']) {
     if (!acs.includes(term)) fail('tab missing formal name: ' + term);
   }
   ok("each tab still carries the paper's formal name");
 
   // 2. the simulation renders points on every variant
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     await page.locator('.tab').nth(i).click();
     await page.waitForTimeout(60);
     const dots = await page.locator('#chart circle').count();
@@ -39,7 +39,7 @@ const ok = m => console.log('  ok:', m);
   ok('every variant renders its scatter');
 
   // 3. the core lesson is enacted: optimizing harder widens the proxy/true gap
-  await page.locator('.tab').nth(3).click();          // adversarial, the starkest
+  await page.locator('.tab').nth(2).click();          // coached, the starkest remaining
   const gapAt = async v => {
     await page.locator('#pressure').fill(String(v));
     await page.locator('#pressure').dispatchEvent('input');
@@ -52,7 +52,7 @@ const ok = m => console.log('  ok:', m);
   if (!(hard > gentle)) fail(`gap did not widen with pressure: gentle=${gentle} hard=${hard}`);
   else ok(`optimizing harder widens the gap (${gentle.toFixed(0)} → ${hard.toFixed(0)} points)`);
   if (!(hard >= 15)) fail('hard optimization did not produce a stark divergence: ' + hard);
-  else ok('hard adversarial optimization diverges starkly');
+  else ok('hard optimization diverges starkly');
 
   // 4. the verdict tracks the gap
   const verdict = await page.locator('#verdict').innerText();
@@ -60,8 +60,10 @@ const ok = m => console.log('  ok:', m);
     fail('verdict did not flag the divergence: ' + verdict);
   else ok('verdict flags the divergence in plain words');
 
-  // 5. citations present and pointing at the sources, not reproducing them
+  // 5. the paper's full taxonomy stays documented even though only three are simulated
   const html = await page.content();
+  if (!/Adversarial Goodhart/.test(html)) fail('adversarial variant no longer documented');
+  else ok('all four variants of the paper remain documented');
   if (!html.includes('arxiv.org/abs/1803.04585')) fail('missing arXiv citation');
   else ok('cites Manheim & Garrabrant (arXiv 1803.04585)');
   if (!/Goodhart, C\. A\. E\. \(1975\)/.test(html)) fail('missing Goodhart 1975 citation');

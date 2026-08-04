@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Goodhart's Law, interactive ✦</title>
-<meta name="description" content="When a measure becomes a target, it ceases to be a good measure. Play with the four ways it breaks — one hiring story, one slider.">
+<meta name="description" content="When a measure becomes a target, it ceases to be a good measure. Play with the ways it breaks — one hiring story, one slider.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 <style>
 :root{
@@ -122,12 +122,12 @@ footer{margin-top:36px; font-size:12.5px; color:var(--muted)}
   <h2>The four ways it breaks</h2>
   <p>These are the four mechanisms from Manheim &amp; Garrabrant's paper
   <a href="https://arxiv.org/abs/1803.04585" rel="noopener"><em>Categorizing Variants of Goodhart's Law</em></a> —
-  the tabs above, in their formal names:</p>
+  the first three are the tabs above, in their formal names:</p>
   <ul class="four">
     <li><span class="nm">The lucky win</span> <span class="ac2">(Regressional Goodhart)</span> — a score is skill plus a good day; the very top is mostly good days.</li>
     <li><span class="nm">Off the chart</span> <span class="ac2">(Extremal Goodhart)</span> — the score predicted skill fine in the normal range; record-breakers live where it doesn't.</li>
     <li><span class="nm">Coached</span> <span class="ac2">(Causal Goodhart)</span> — raising the score directly doesn't raise the skill, like ice on a thermometer.</li>
-    <li><span class="nm">Cheating</span> <span class="ac2">(Adversarial Goodhart)</span> — people who know your cutoff game it; pressure creates cheaters, not just selects them.</li>
+    <li><span class="nm">Gamed from the other side</span> <span class="ac2">(Adversarial Goodhart — described in the paper, not simulated here)</span> — people who know your cutoff respond to it; pressure changes their behaviour, not just your selection.</li>
   </ul>
 
   <h2>Why it's on this site</h2>
@@ -201,20 +201,6 @@ footer{margin-top:36px; font-size:12.5px; color:var(--muted)}
           const v = clamp(0.5 + 0.16 * gauss(r));
           if (i % 2) pts.push({ u: clamp(v + 0.07 * gauss(r)), v });
           else pts.push({ u: clamp(0.55 + 0.45 * r()), v, gamed: true });
-        }
-        return pts;
-      },
-    },
-    {
-      id: "adversarial", label: "Cheating", ac: "adversarial",
-      story: `Candidates <b>know your cutoff</b>. The stricter you hire, the more of them cheat — scores go up while skill goes down. Pressure creates cheaters, not just selects them.`,
-      gen(p, r) {
-        const pts = [];
-        const gamedFrac = 0.15 + 0.7 * p;
-        for (let i = 0; i < N; i++) {
-          const v = clamp(0.5 + 0.16 * gauss(r));
-          if (r() < gamedFrac) pts.push({ u: clamp(v + 0.32 + 0.1 * gauss(r)), v: clamp(v - 0.12), gamed: true });
-          else pts.push({ u: clamp(v + 0.08 * gauss(r)), v });
         }
         return pts;
       },
