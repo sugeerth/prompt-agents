@@ -18,6 +18,7 @@ const ok = msg => console.log('  ok:', msg);
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL);
+  await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
 
   /* 1. every domain produces a sane prompt at every depth/tone */
   console.log('== domains x depth x tone ==');
@@ -134,6 +135,7 @@ const ok = msg => console.log('  ok:', msg);
   /* 7. deep link */
   console.log('== deep link ==');
   await page.goto(URL + '#t=trip%20to%20japan');
+  await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   await page.waitForTimeout(150);
   const dl = await page.locator('#prompt').innerText();
   if (!dl.toLowerCase().includes('japan')) fail('deep link #t= did not populate: ' + dl);
@@ -160,6 +162,7 @@ const ok = msg => console.log('  ok:', msg);
   const mob = await ctx.newPage();
   await mob.setViewportSize({ width: 375, height: 720 });
   await mob.goto(URL);
+  await mob.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   await mob.fill('#q', 'meal prep for the week');
   const overflow = await mob.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 2) fail(`horizontal overflow on mobile: ${overflow}px`);

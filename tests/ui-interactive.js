@@ -17,6 +17,7 @@ const ok = m => console.log('  ok:', m);
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL);
+  await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   // This suite exercises answer-shaping (depth cycling, size caps, the paste
   // marker), which only exists in the Shaped steer level.
   while ((await page.locator('#steer').innerText()) !== 'Shaped') await page.click('#steer');

@@ -77,6 +77,14 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .slider label output{color:var(--ink); font-weight:600}
 input[type=range]{width:100%; accent-color:var(--accent)}
 .drillwrap{min-width:132px; flex:0 1 auto}
+.tunebtn{
+  margin-top:18px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  color:var(--muted); background:none; border:none; padding:4px 2px;
+}
+.tunebtn:hover{color:var(--ink)}
+#tune{display:none}
+#tune.open{display:flex}
+#examples .exlabel{font-size:12px; color:var(--muted); align-self:center}
 .switch{
   display:block; width:44px; height:24px; border-radius:999px; border:1px solid var(--line);
   background:var(--chip); cursor:pointer; position:relative; padding:0; transition:background .15s;
@@ -148,7 +156,7 @@ footer a{color:var(--accent)}
 <body>
 <main>
   <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
-  <p class="sub">Start typing anything. A prompt builds itself from what you actually want — click any part to change it, then copy or launch. Steer it from the model's own voice to a tightly shaped answer.</p>
+  <p class="sub">Type what you need. A ready-to-paste prompt builds itself — tap any part of it to change it.</p>
 
   <div class="inputwrap">
     <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -157,9 +165,23 @@ footer a{color:var(--accent)}
     <div id="sug" role="listbox"></div>
   </div>
 
+  <div class="row" id="examples"></div>
+
+  <div id="card">
+    <div id="prompt" class="empty"></div>
+    <div class="metrics" id="metrics"></div>
+    <div id="graph"></div>
+    <div class="count" id="count"></div>
+    <div class="actions">
+      <button class="btn primary" id="copy">Copy prompt</button>
+      <div class="launch" id="launch"></div>
+    </div>
+  </div>
+
   <div class="row" id="chips"></div>
 
-  <div class="sliders">
+  <button id="tunebtn" class="tunebtn" type="button" aria-expanded="false">Fine-tune ▸</button>
+  <div class="sliders" id="tune">
     <div class="slider drillwrap">
       <label><span>Steer</span><output id="steerOut">say what I want</output></label>
       <button id="steer" class="modebtn" type="button"
@@ -182,17 +204,6 @@ footer a{color:var(--accent)}
       <label><span>Reasoning</span><output id="reasonOut">when earned</output></label>
       <button id="reason" class="modebtn" type="button"
               title="Auto: spend reasoning only when the ask is structurally complex. Always: force it. Off: never.">Auto</button>
-    </div>
-  </div>
-
-  <div id="card">
-    <div id="prompt" class="empty"></div>
-    <div class="metrics" id="metrics"></div>
-    <div id="graph"></div>
-    <div class="count" id="count"></div>
-    <div class="actions">
-      <button class="btn primary" id="copy">Copy prompt</button>
-      <div class="launch" id="launch"></div>
     </div>
   </div>
 

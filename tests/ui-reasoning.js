@@ -21,6 +21,7 @@ const VERIFY = 'Check the answer once for the most likely error before replying.
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL);
+  await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   const text = () => page.locator('#prompt').innerText();
   const metrics = () => page.locator('#metrics').innerText();
   const set = async q => { await page.fill('#q', ''); await page.fill('#q', q); await page.keyboard.press('Escape'); await page.waitForTimeout(50); };
