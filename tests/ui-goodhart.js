@@ -17,11 +17,17 @@ const ok = m => console.log('  ok:', m);
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL);
 
-  // 1. four variant tabs, matching the paper's taxonomy
+  // 1. four tabs in plain language, each carrying its formal name
   const tabs = await page.locator('.tab').allInnerTexts();
-  if (tabs.join(',') !== 'Regressional,Extremal,Causal,Adversarial')
-    fail('tabs wrong: ' + tabs.join(','));
-  else ok('all four Goodhart variants present');
+  const plain = tabs.map(t => t.split('\n')[0]).join(',');
+  if (plain !== 'The lucky win,Off the chart,Coached,Cheating')
+    fail('plain tab names wrong: ' + plain);
+  else ok('tabs speak plain language');
+  const acs = tabs.join(' ').toLowerCase();
+  for (const term of ['regressional', 'extremal', 'causal', 'adversarial']) {
+    if (!acs.includes(term)) fail('tab missing formal name: ' + term);
+  }
+  ok("each tab still carries the paper's formal name");
 
   // 2. the simulation renders points on every variant
   for (let i = 0; i < 4; i++) {
