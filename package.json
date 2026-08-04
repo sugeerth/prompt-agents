@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run test:eval && npm run test:ui",
     "test:eval": "node tests/graph-eval.js && node tests/reasoning-eval.js && node tests/intent-eval.js",
-    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js && node tests/ui-steer.js"
+    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js && node tests/ui-steer.js && node tests/ui-goodhart.js"
   },
   "devDependencies": {
     "playwright": "^1.47.0"
