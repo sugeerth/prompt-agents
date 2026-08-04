@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Goodhart's Law, interactive ✦</title>
-<meta name="description" content="When a measure becomes a target, it ceases to be a good measure. The four ways it fails — Manheim & Garrabrant's taxonomy — each as a live simulation.">
+<meta name="description" content="When a measure becomes a target, it ceases to be a good measure. Play with the ways it breaks — one hiring story, one slider.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 <style>
 :root{
@@ -25,100 +25,93 @@ body{
   background:var(--bg); color:var(--ink); min-height:100vh;
   font:16px/1.6 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
 }
-main{max-width:760px; margin:0 auto; padding:40px 20px 80px}
+main{max-width:720px; margin:0 auto; padding:36px 20px 80px}
 a{color:var(--accent)}
-header{margin-bottom:8px}
-h1{font-size:26px; letter-spacing:-.02em; margin:0 0 4px}
-.crumb{font-size:13px; color:var(--muted); margin-bottom:22px}
+h1{font-size:25px; letter-spacing:-.02em; margin:0 0 4px}
+.crumb{font-size:13px; color:var(--muted); margin-bottom:20px}
 .law{
-  font-size:20px; line-height:1.5; font-weight:600; margin:18px 0 6px;
+  font-size:21px; line-height:1.45; font-weight:650; margin:14px 0 4px;
   border-left:3px solid var(--accent); padding-left:14px;
 }
-.attr{color:var(--muted); font-size:13.5px; margin:0 0 18px; padding-left:17px}
+.attr{color:var(--muted); font-size:13px; margin:0 0 16px; padding-left:17px}
+.setup{font-size:16.5px; margin:0 0 14px}
 p{margin:12px 0}
-h2{font-size:19px; margin:34px 0 8px; letter-spacing:-.01em}
+h2{font-size:18px; margin:34px 0 8px; letter-spacing:-.01em}
 
-/* ---- interactive panel ---- */
-.tabs{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 0}
+/* ---- interactive ---- */
+.tabs{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 0}
 .tab{
   border:1px solid var(--line); background:var(--chip); color:var(--ink);
-  padding:7px 14px; border-radius:999px; font:inherit; font-size:14px; cursor:pointer;
+  padding:8px 14px 6px; border-radius:12px; font:inherit; font-size:14.5px; font-weight:600; cursor:pointer;
+  display:flex; flex-direction:column; align-items:flex-start; gap:1px;
 }
+.tab .ac{font-size:10.5px; font-weight:500; opacity:.65; text-transform:lowercase}
 .tab.on{background:var(--chip-on); color:var(--chip-on-ink); border-color:var(--chip-on)}
 #panel{
-  margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px;
   box-shadow:var(--shadow); padding:18px;
 }
-#story{min-height:66px; font-size:15px; color:var(--ink); margin:0 0 10px}
+#story{min-height:52px; font-size:15.5px; margin:0 0 8px}
 #story b{color:var(--accent)}
 #chart{width:100%; height:auto; display:block}
-.axis{font-size:11px; fill:var(--muted)}
-.controls{display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap}
+.axis{font-size:11.5px; fill:var(--muted)}
+.controls{display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap}
 .controls label{font-size:13px; color:var(--muted); white-space:nowrap}
-input[type=range]{flex:1; min-width:160px; accent-color:var(--accent)}
-#readout{
-  display:flex; gap:22px; margin-top:14px; flex-wrap:wrap;
-}
-.stat{flex:1; min-width:180px}
-.stat .lbl{font-size:12px; color:var(--muted)}
-.stat .bar{height:10px; border-radius:6px; background:var(--chip); margin-top:5px; overflow:hidden}
+input[type=range]{flex:1; min-width:150px; accent-color:var(--accent)}
+#readout{display:flex; gap:22px; margin-top:14px; flex-wrap:wrap}
+.stat{flex:1; min-width:170px}
+.stat .lbl{font-size:12.5px; color:var(--muted)}
+.stat .bar{height:12px; border-radius:6px; background:var(--chip); margin-top:5px; overflow:hidden}
 .stat .fill{height:100%; border-radius:6px; transition:width .2s}
 .stat.proxy .fill{background:var(--accent)}
 .stat.true .fill{background:var(--good)}
-.stat .num{font-size:13px; font-weight:650; margin-top:3px}
-#verdict{margin-top:12px; font-size:14.5px; font-weight:600}
+.stat .num{font-size:14px; font-weight:700; margin-top:3px}
+#verdict{margin-top:12px; font-size:15.5px; font-weight:650}
 #verdict.bad{color:var(--bad)}
 #verdict.ok{color:var(--good)}
 
+.four{list-style:none; padding:0; margin:10px 0}
+.four li{margin:9px 0; font-size:14.5px}
+.four .nm{font-weight:650}
+.four .ac2{color:var(--muted); font-size:12.5px}
 .here{
-  margin-top:30px; background:var(--panel); border:1px solid var(--line); border-radius:14px;
-  padding:14px 18px; font-size:14.5px; color:var(--muted);
+  margin-top:8px; border-left:3px solid var(--line); padding:2px 0 2px 14px;
+  font-size:14px; color:var(--muted);
 }
-.refs{font-size:13.5px; color:var(--muted); margin-top:30px}
-.refs li{margin:6px 0}
-footer{margin-top:40px; font-size:13px; color:var(--muted)}
+.refs{font-size:13px; color:var(--muted); margin-top:10px; padding-left:18px}
+.refs li{margin:5px 0}
+footer{margin-top:36px; font-size:12.5px; color:var(--muted)}
 </style>
 </head>
 <body>
 <main>
-  <header>
-    <h1>Goodhart's Law, interactive</h1>
-    <div class="crumb"><a href="./">← Prompt Studio</a> · an explainer of the Goodhart taxonomy paper, with live simulations</div>
-  </header>
+  <h1>Goodhart's Law</h1>
+  <div class="crumb"><a href="./">← Prompt Studio</a> · playable in 10 seconds</div>
 
   <p class="law">"When a measure becomes a target, it ceases to be a good measure."</p>
-  <p class="attr">Marilyn Strathern's phrasing (1997) of Charles Goodhart's 1975 observation about monetary policy.</p>
+  <p class="attr">Marilyn Strathern (1997), summarizing Charles Goodhart (1975).</p>
 
-  <p>You can rarely optimize the thing you actually care about — student learning, code quality,
-  a model being genuinely helpful. So you optimize a <b>proxy</b> you can measure: test scores,
-  tickets closed, benchmark accuracy. Goodhart's Law says the correlation you relied on
-  breaks precisely because you leaned on it.</p>
-
-  <p>Manheim &amp; Garrabrant's paper <em>Categorizing Variants of Goodhart's Law</em> showed this
-  isn't one failure but <b>four distinct mechanisms</b>. Each tab below is one of them, simulated live:
-  every dot is a candidate you might pick (a policy, a model, an employee, an answer), plotted by
-  how good it <em>looks</em> on the metric (→) versus how good it <em>actually is</em> (↑).
-  Drag the slider to optimize harder — select a smaller elite by metric score — and watch what
-  the selection actually delivers.</p>
+  <p class="setup"><b>You're hiring.</b> Every dot is a candidate — test score across,
+  real skill up. Raise your bar and watch the score stop meaning what you think.</p>
 
   <div class="tabs" id="tabs"></div>
 
   <div id="panel">
     <p id="story"></p>
-    <svg id="chart" viewBox="0 0 640 300" role="img" aria-label="proxy versus true value scatter"></svg>
+    <svg id="chart" viewBox="0 0 640 290" role="img" aria-label="test score versus real skill"></svg>
     <div class="controls">
-      <label>Optimize gently</label>
-      <input type="range" id="pressure" min="0" max="100" step="1" value="20" aria-label="optimization pressure">
-      <label>Optimize hard</label>
+      <label>hire broadly</label>
+      <input type="range" id="pressure" min="0" max="100" step="1" value="20" aria-label="how strictly you hire by score">
+      <label>only top scores</label>
     </div>
     <div id="readout">
       <div class="stat proxy">
-        <div class="lbl">What your metric says you picked</div>
+        <div class="lbl">What their scores said</div>
         <div class="bar"><div class="fill" id="proxyfill"></div></div>
         <div class="num" id="proxynum"></div>
       </div>
       <div class="stat true">
-        <div class="lbl">What you actually got</div>
+        <div class="lbl">How good they really are</div>
         <div class="bar"><div class="fill" id="truefill"></div></div>
         <div class="num" id="truenum"></div>
       </div>
@@ -126,16 +119,20 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
     <div id="verdict"></div>
   </div>
 
-  <h2>Why this page lives on this site</h2>
-  <div class="here">
-    Prompt Studio's reasoning and intent layers are gated by scored evals — 31/31 on one corpus,
-    42/42 on another. Those numbers are proxies, and this page is the caution label: the corpora are
-    written by the same people who tune the thresholds, which is regressional Goodhart waiting to
-    happen. It's also why the graph layer is tuned for <em>precision over recall</em> and gets a
-    fire-rate ceiling rather than a fire-rate target — a target would invite exactly the gaming
-    simulated above. And it's why prompts here state goals rather than forcing form: a word-cap is
-    a proxy for succinctness, and models optimize the cap, not the succinctness.
-  </div>
+  <h2>The four ways it breaks</h2>
+  <p>These are the four mechanisms from Manheim &amp; Garrabrant's paper
+  <a href="https://arxiv.org/abs/1803.04585" rel="noopener"><em>Categorizing Variants of Goodhart's Law</em></a> —
+  the first three are the tabs above, in their formal names:</p>
+  <ul class="four">
+    <li><span class="nm">The lucky win</span> <span class="ac2">(Regressional Goodhart)</span> — a score is skill plus a good day; the very top is mostly good days.</li>
+    <li><span class="nm">Off the chart</span> <span class="ac2">(Extremal Goodhart)</span> — the score predicted skill fine in the normal range; record-breakers live where it doesn't.</li>
+    <li><span class="nm">Coached</span> <span class="ac2">(Causal Goodhart)</span> — raising the score directly doesn't raise the skill, like ice on a thermometer.</li>
+    <li><span class="nm">Gamed from the other side</span> <span class="ac2">(Adversarial Goodhart — described in the paper, not simulated here)</span> — people who know your cutoff respond to it; pressure changes their behaviour, not just your selection.</li>
+  </ul>
+
+  <h2>Why it's on this site</h2>
+  <p class="here">Prompt Studio's own quality gates are scored evals — proxies, written by the same
+  hands that tune the thresholds. This page is the caution label we keep next to them.</p>
 
   <h2>References</h2>
   <ul class="refs">
@@ -147,15 +144,14 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
       European Review, 5(3).</li>
   </ul>
 
-  <footer>All simulation text and code on this page is original; the paper itself is linked above, not reproduced.
-  Deterministic simulations, no libraries, nothing leaves your browser.</footer>
+  <footer>All text and simulation code here is original; the paper is linked, not reproduced.
+  Deterministic, no libraries, nothing leaves your browser.</footer>
 </main>
 
 <script>
-/* Four Goodhart variants, one shared scatter.
-   Each dot: u = metric score (x), v = true value (y). "Optimizing" = selecting
-   the top-K by u, where K shrinks as pressure rises. Deterministic RNG so the
-   page tells the same story on every load. */
+/* One hiring story, four mechanisms. Every dot: u = test score (x),
+   v = real skill (y). "Raising the bar" = keeping a smaller elite by score.
+   Deterministic RNG so the page tells the same story on every load. */
 (function () {
   const N = 130;
   function rng(seed) {
@@ -167,16 +163,13 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
-  const gauss = r => (r() + r() + r() + r()) / 2 - 1;   // ~N(0, .29), cheap
+  const gauss = r => (r() + r() + r() + r()) / 2 - 1;
   const clamp = x => Math.max(0.02, Math.min(0.98, x));
 
-  /* Each variant returns points {u, v, gamed?} for a given pressure (0..1).
-     Only Adversarial uses pressure during generation — the agent responds to
-     how hard you optimize; the other mechanisms are properties of the world. */
   const VARIANTS = [
     {
-      id: "regressional", label: "Regressional",
-      story: `The metric is the truth <b>plus noise</b>. The top scorers are disproportionately the lucky, not the good — select the extreme and the noise comes with it. This one is unavoidable; only its size varies.`,
+      id: "regressional", label: "The lucky win", ac: "regressional",
+      story: `A test score is real skill <b>plus a good day</b>. Hire only the very top scores and you mostly hire the good days.`,
       gen(p, r) {
         const pts = [];
         for (let i = 0; i < N; i++) {
@@ -187,41 +180,27 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
       },
     },
     {
-      id: "extremal", label: "Extremal",
-      story: `The correlation is real — <b>in the range you observed it</b>. Push the metric into territory no one has visited and the relationship changes regime: the strongest-looking candidates sit exactly where the metric stops meaning anything.`,
+      id: "extremal", label: "Off the chart", ac: "extremal",
+      story: `Scores predicted skill fine — <b>in the normal range</b>. The record-breakers crammed the test itself; out there the score stops meaning anything.`,
       gen(p, r) {
         const pts = [];
         for (let i = 0; i < N; i++) {
           const u = clamp(0.5 + 0.22 * gauss(r));
-          const collapse = Math.max(0, u - 0.72) * 2.6;      // beyond the observed regime
+          const collapse = Math.max(0, u - 0.72) * 2.6;
           pts.push({ u, v: clamp(u - collapse + 0.06 * gauss(r)) });
         }
         return pts;
       },
     },
     {
-      id: "causal", label: "Causal",
-      story: `The metric <b>correlates</b> with the goal but doesn't cause it — like putting ice on a thermometer. Half these candidates raised their score directly; their true value never moved. Optimizing the metric selects exactly them.`,
+      id: "causal", label: "Coached", ac: "causal",
+      story: `Test-prep coaching raises the <b>score, not the skill</b> — ice on a thermometer. Half these candidates were coached; hire by score and you hire exactly them.`,
       gen(p, r) {
         const pts = [];
         for (let i = 0; i < N; i++) {
           const v = clamp(0.5 + 0.16 * gauss(r));
-          if (i % 2) pts.push({ u: clamp(v + 0.07 * gauss(r)), v });               // honest signal
-          else pts.push({ u: clamp(0.55 + 0.45 * r()), v, gamed: true });          // score set directly
-        }
-        return pts;
-      },
-    },
-    {
-      id: "adversarial", label: "Adversarial",
-      story: `The candidates are <b>agents who know your metric</b>. The harder you optimize, the more of them game it — inflating the score while quietly spending the true value. Pressure doesn't just select the gamed; it creates them.`,
-      gen(p, r) {
-        const pts = [];
-        const gamedFrac = 0.15 + 0.7 * p;                   // gaming responds to pressure
-        for (let i = 0; i < N; i++) {
-          const v = clamp(0.5 + 0.16 * gauss(r));
-          if (r() < gamedFrac) pts.push({ u: clamp(v + 0.32 + 0.1 * gauss(r)), v: clamp(v - 0.12), gamed: true });
-          else pts.push({ u: clamp(v + 0.08 * gauss(r)), v });
+          if (i % 2) pts.push({ u: clamp(v + 0.07 * gauss(r)), v });
+          else pts.push({ u: clamp(0.55 + 0.45 * r()), v, gamed: true });
         }
         return pts;
       },
@@ -233,7 +212,7 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
   let active = 0;
 
   tabsEl.innerHTML = VARIANTS.map((v, i) =>
-    `<button class="tab${i === 0 ? " on" : ""}" data-i="${i}" type="button">${v.label}</button>`).join("");
+    `<button class="tab${i === 0 ? " on" : ""}" data-i="${i}" type="button">${v.label}<span class="ac">${v.ac}</span></button>`).join("");
   tabsEl.addEventListener("click", e => {
     const b = e.target.closest(".tab"); if (!b) return;
     active = +b.dataset.i;
@@ -248,17 +227,16 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
     const pts = variant.gen(p, rng(42));
     story.innerHTML = variant.story;
 
-    // optimizing harder = keeping a smaller elite, chosen purely by metric
     const keep = Math.max(4, Math.round(N * (0.5 - 0.46 * p)));
     const byU = [...pts].sort((a, b) => b.u - a.u);
     const chosen = new Set(byU.slice(0, keep));
 
-    const X = u => 46 + u * 570, Y = v => 272 - v * 250;
+    const X = u => 46 + u * 570, Y = v => 262 - v * 240;
     const parts = [];
-    parts.push(`<line x1="46" y1="272" x2="616" y2="272" stroke="currentColor" stroke-opacity=".25"/>`);
-    parts.push(`<line x1="46" y1="272" x2="46" y2="16" stroke="currentColor" stroke-opacity=".25"/>`);
-    parts.push(`<text class="axis" x="616" y="290" text-anchor="end">looks good on the metric →</text>`);
-    parts.push(`<text class="axis" x="14" y="20" transform="rotate(-90 14 20)" text-anchor="end">actually good ↑</text>`);
+    parts.push(`<line x1="46" y1="262" x2="616" y2="262" stroke="currentColor" stroke-opacity=".25"/>`);
+    parts.push(`<line x1="46" y1="262" x2="46" y2="16" stroke="currentColor" stroke-opacity=".25"/>`);
+    parts.push(`<text class="axis" x="616" y="280" text-anchor="end">test score →</text>`);
+    parts.push(`<text class="axis" x="14" y="20" transform="rotate(-90 14 20)" text-anchor="end">real skill ↑</text>`);
     for (const pt of pts) {
       const sel = chosen.has(pt);
       const fill = sel ? (pt.gamed ? "var(--bad)" : "var(--accent)") : "currentColor";
@@ -277,9 +255,9 @@ footer{margin-top:40px; font-size:13px; color:var(--muted)}
 
     const gap = meanU - meanV;
     const verdict = $("verdict");
-    if (gap > 0.18) { verdict.className = "bad"; verdict.textContent = "The measure has become the target — what you selected is much worse than it looks."; }
-    else if (gap > 0.08) { verdict.className = "bad"; verdict.textContent = "The gap is opening: the metric is starting to flatter your selection."; }
-    else { verdict.className = "ok"; verdict.textContent = "At this pressure the metric is still roughly honest."; }
+    if (gap > 0.18) { verdict.className = "bad"; verdict.textContent = "The measure has become the target — your hires are much worse than their scores."; }
+    else if (gap > 0.08) { verdict.className = "bad"; verdict.textContent = "The gap is opening: the scores are starting to flatter your hires."; }
+    else { verdict.className = "ok"; verdict.textContent = "At this bar, the score is still roughly honest."; }
   }
 
   render();
