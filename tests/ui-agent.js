@@ -81,6 +81,26 @@ const ok = m => console.log('  ok:', m);
   }
   ok('agent chips (Plan first, Show proof, Scope guard) compose onto the prompt');
 
+  // 6b. the harness specializes by task class: each class names its own proof
+  let classesOK = true;
+  for (const [q, snippet, cls] of [
+    ['migrate my database schema', 'Back up first', 'data'],
+    ['keep my prs green', "what you'll check, how often", 'ongoing/ops'],
+    ['clean up my downloads folder', 'Dry run first', 'files'],
+    ['refactor my codebase', 'paste the output that proves it passes', 'code'],
+  ]) {
+    await set(q);
+    if (!(await text()).includes(snippet)) { fail(`class ${cls} line missing on "${q}": ` + await text()); classesOK = false; }
+  }
+  if (classesOK) ok('harness specializes: data backs up, ops sets cadence, files dry-run, code proves tests');
+
+  // 6c. the class line survives Native — it is a safety precondition, not formatting
+  await steer('Native');
+  await set('migrate my database schema');
+  if (!(await text()).includes('Back up first')) fail('class precondition lost in Native: ' + await text());
+  else ok('class preconditions survive Native');
+  await steer('Guided');
+
   // 7. agent asks get the verification line from the reasoning layer at L2+
   await set('migrate my database then update the api then notify the team');
   if (!(await text()).includes('Check the answer once')) fail('agent ask missing verify line: ' + await text());

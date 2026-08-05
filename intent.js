@@ -69,7 +69,9 @@
         [/\bfor me\b/, 2.5],
         [/\b(keep|watch|monitor) (my|the|our)\b/, 2.5],
         // an imperative aimed at YOUR OWN infrastructure is a hand-off, not a how-to
-        [/\b(my|our) (repos?|codebase|database|servers?|site|website|app|logs|prs?|dependencies|pipeline|backlog|inbox)\b/, 1.5],
+        [/\b(my|our) (repos?|codebase|database|servers?|site|website|app|logs|prs?|dependencies|pipeline|backlog|inbox|downloads|files|folders|photos)\b/, 1.5],
+        // imperative housekeeping on your own stuff is also a hand-off
+        [/^(clean ?up|sort|tidy|organi[sz]e)\b.*\b(my|our)\b/, 2.5],
         [/\b(pipeline|workflow|cron)\b/, 1.5],
         [/\b(then (deploy|ship|schedule|publish|notify))\b/, 1.5],
       ],
