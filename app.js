@@ -146,6 +146,9 @@ const ARTIFACT_DOMAINS = new Set(["write", "email", "code", "create", "image"]);
 
 function detectDomain(text) {
   const r = INTENT ? INTENT.recognize(text) : null;
+  /* A confident hand-off outranks topic keywords: "refactor my codebase" is
+     agent work that HAPPENS to be about code, not a request for code. */
+  if (r && r.id === "delegate" && r.confidence >= 0.5) return "agent";
   for (const [id, re] of SIGS) {
     if (!re.test(text)) continue;
     if (r && r.id === "check" && r.confidence >= 0.6 && ARTIFACT_DOMAINS.has(id)) return "analyze";
@@ -179,6 +182,27 @@ const NEEDS = {
   summarize: "Work only from the text I paste below.",
 };
 
+/* Delegated work is not one thing. Each class of task has its own real proof
+   and its own way of going wrong, so the harness names the actual evidence
+   and the actual safety rule for THAT class — "verified" by test output is
+   not "verified" by row counts. First match wins; checked most-specific
+   first. These are content preconditions, so they survive every steer level. */
+const AGENT_CLASSES = [
+  { sig: /\b(database|db|schema|migrations?|migrate|tables?|records|dataset)\b/i,
+    line: "Back up first. Verify each step with a count or checksum; never drop data without asking." },
+  { sig: /\b(keep|watch|monitor(ing)?|alerts?|logs?|uptime|green)\b/i,
+    line: "This is ongoing: say what you'll check, how often, and what triggers action — then verify the first check live." },
+  { sig: /\b(files?|folders?|inbox|photos|downloads|organi[sz]e|rename|clean ?up)\b/i,
+    line: "Dry run first: list what would change and wait for my OK before changing anything." },
+  { sig: /\b(repo|repos|codebase|refactor|ci|cd|tests?|dependenc|deploy|pipeline|prs?|website|app)\b/i,
+    line: "Verify with the tests before and after; work in small commits; paste the output that proves it passes." },
+];
+function agentNeed(domId, t) {
+  if (domId !== "agent") return null;
+  for (const c of AGENT_CLASSES) if (c.sig.test(t)) return c.line;
+  return null;
+}
+
 const AUDIENCE = [
   "Assume I know nothing about this.",
   null,
@@ -209,6 +233,8 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (!t) return [];
   const segs = [{ text: dom.base(t), add: false, kind: "base" }];
   if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
+  const classNeed = agentNeed(domId, t);
+  if (classNeed && !state.noNeed) segs.push({ text: classNeed, add: true, kind: "need" });
   const shape = shapeFor(dom, depth);
   // keep [paste text below] marker at the very end
   const marker = shape.includes("\n\n[paste text below]");
@@ -445,6 +471,8 @@ function currentSegs() {
     const domId = state.domain || detectDomain(state.topic);
     const segs = [{ text: tidy(state.gold ? state.gold.q : state.topic), add: false, kind: "base" }];
     if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
+    const nClassNeed = agentNeed(domId, state.topic);
+    if (nClassNeed && !state.noNeed) segs.push({ text: nClassNeed, add: true, kind: "need" });
     segs.push(...intentSegs());
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
