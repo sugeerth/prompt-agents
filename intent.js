@@ -59,6 +59,20 @@
       ],
     },
     {
+      id: "delegate", label: "hand it off",
+      line: "Do this end to end — I want the result, not instructions.",
+      cues: [
+        [/\bend to end\b/, 3],
+        [/\bautomat(e|ing|ion)\b/, 3],
+        [/\bbuild and (deploy|ship|publish)\b/, 3],
+        [/^(set ?up|migrate|deploy|refactor|integrate|provision|maintain)\b/, 2.5],
+        [/\bfor me\b/, 2.5],
+        [/\b(keep|watch|monitor) (my|the|our)\b/, 2.5],
+        [/\b(pipeline|workflow|cron)\b/, 1.5],
+        [/\b(then (deploy|ship|schedule|publish|notify))\b/, 1.5],
+      ],
+    },
+    {
       id: "do", label: "do it myself",
       line: "I want to be able to do this myself.",
       cues: [

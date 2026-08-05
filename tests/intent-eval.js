@@ -44,6 +44,14 @@ const CORPUS = [
   ['walk me through filing taxes', 'do'],
   ['install python on a mac', 'do'],
 
+  // delegate — wants it done end to end, not instructions
+  ['set up ci for my repo', 'delegate'],
+  ['automate my weekly report', 'delegate'],
+  ['migrate my database to postgres', 'delegate'],
+  ['build and deploy a landing page', 'delegate'],
+  ['keep my prs green end to end', 'delegate'],
+  ['monitor my logs for errors', 'delegate'],
+
   // fix — wants it working
   ['fix my login bug', 'fix'],
   ['my wifi keeps dropping', 'fix'],

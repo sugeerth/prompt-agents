@@ -67,8 +67,8 @@ Domain answers *what this is about*. Intent answers the more useful question:
 someone curious about fermentation and someone whose starter died this morning
 both type "sourdough starter".
 
-Nine goals are recognized — **understand · decide · make · do · fix · explore ·
-check · plan · find** — each contributing one line that states the goal and
+Ten goals are recognized — **understand · decide · make · do · delegate · fix ·
+explore · check · plan · find** — each contributing one line that states the goal and
 never the format. Recognition also drives two other things: it picks the domain
 when no topic cue fires ("my wifi keeps dropping" names no domain noun but is
 unmistakably a fix), and it stops a review request being framed as a drafting
@@ -77,6 +77,25 @@ request.
 When confidence is low, the prompt asks instead of assuming: *"If my goal here
 is ambiguous, ask me one question before answering."* A confidently wrong frame
 costs more than a round trip.
+
+## Agent tasks: hand it off, with a harness
+
+Some asks aren't questions — they're work: *set up ci for my repo*,
+*migrate my database*, *keep my prs green*. The intent layer recognizes
+**delegate** as its own goal ("Do this end to end — I want the result, not
+instructions"), distinct from *do-it-myself*: "how do I set up CI" wants
+instructions, "set up CI for my repo" wants it done.
+
+Delegated asks build an **agent harness** instead of an answer shape — a
+behavioral contract for whatever agent you paste it into (Claude Code, Cursor,
+anything agentic): a verifiable end state, plan-first, stepwise execution with
+verification, scope control, ask-before-destructive, escalation on being
+blocked, and a completion report stating *how* the result was verified —
+evidence, not the word "verified". Depth scales the contract from a terse
+one-liner to full checkpoints and two-strike stop rules. Agent chips (Plan
+first, Define done, Show proof, Scope guard, Escalate, Clean up) cover the
+top failure modes of long-horizon agents, and six gold prompts ship for the
+most-delegated tasks.
 
 ## The reasoning layer
 
