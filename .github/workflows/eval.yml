@@ -49,3 +49,5 @@ jobs:
         run: node tests/ui-steer.js
       - name: Goodhart page
         run: node tests/ui-goodhart.js
+      - name: Agent harness
+        run: node tests/ui-agent.js

@@ -188,7 +188,7 @@
   const COMPUTE_STEPS = "Work in brief steps, five words each, then give the final answer.";
 
   /* domains where a wrong answer is expensive get one verification line */
-  const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "math", "analyze", "biz"]);
+  const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "math", "analyze", "biz", "agent"]);
   const VERIFY = "Check the answer once for the most likely error before replying.";
 
   /* Native variants grant the same thinking without touching the shape of the

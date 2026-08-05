@@ -98,8 +98,10 @@ const DOMAINS = {
     "One flowing line: subject, style, mood. Nothing else.",
     "One flowing line covering subject, style, lighting, composition, mood — then a short negative prompt.",
     "Three variants (photoreal, illustration, minimal), each one flowing line, each with a short negative prompt." ]},
-  agent:     { em:"🤖", label:"Agent",     base:t=>`Do this task end to end: ${t}.`, shapes:[ null,
-    "Plan briefly first, then execute step by step, verifying each step. Ask before anything destructive. Report the outcome, not the process.", null ]},
+  agent:     { em:"🤖", label:"Agent",     base:t=>`Take this on end to end: ${t}.`, shapes:[
+    "Plan briefly, do it, verify it works, then report: done and how verified, or blocked and why.",
+    "Plan first: milestones, one line each. Execute step by step, verifying each before moving on. Stay in scope. Ask before anything destructive; if blocked, report what you need. Finish with what changed and how you verified it.",
+    "Plan first: milestones and the main risk of each. Execute in small reversible steps, checkpointing progress after each milestone in one line. Ask before anything destructive; if blocked twice on the same thing, stop and report exactly what you need. Finish with a report: end state, how it is verified, what remains." ]},
   general:   { em:"✳️", label:"General",   base:t=>`Help me with: ${t}.`, shapes:[
     "Direct answer only, 3 sentences max.",
     "Direct answer first, then only the essential detail. Max 130 words.",
@@ -134,7 +136,7 @@ const SIGS = [
    which domain to frame the ask as. "my wifi keeps dropping" names no domain
    noun, but the goal is unmistakably to fix something. */
 const INTENT_DOMAIN = {
-  fix: "tech", make: "write", explore: "create", plan: "plan",
+  fix: "tech", make: "write", explore: "create", plan: "plan", delegate: "agent",
   find: "local", decide: "decide", understand: "learn", check: "analyze",
 };
 

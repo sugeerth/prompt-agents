@@ -175,7 +175,7 @@ window.PS_MODS = [
  {
   "id": "sources",
   "label": "Sources",
-  "text": "Cite 2–3 reputable sources.",
+  "text": "Cite 2\u20133 reputable sources.",
   "doms": [
    "health",
    "sci",
@@ -276,6 +276,63 @@ window.PS_MODS = [
   "id": "deeper",
   "label": "Deeper",
   "text": "Go one level deeper, still brief."
+ },
+ {
+  "id": "planfirst",
+  "label": "Plan first",
+  "text": "Plan first; wait for my OK before executing.",
+  "doms": [
+   "agent",
+   "code",
+   "biz"
+  ]
+ },
+ {
+  "id": "definedone",
+  "label": "Define done",
+  "text": "Define done as a checkable end state first.",
+  "doms": [
+   "agent",
+   "code",
+   "biz"
+  ]
+ },
+ {
+  "id": "showproof",
+  "label": "Show proof",
+  "text": "Show evidence: paste the output that proves success.",
+  "doms": [
+   "agent",
+   "code",
+   "debug"
+  ]
+ },
+ {
+  "id": "scopeguard",
+  "label": "Scope guard",
+  "text": "Fix only what's asked; note other issues, don't touch.",
+  "doms": [
+   "agent",
+   "code",
+   "debug"
+  ]
+ },
+ {
+  "id": "escalate",
+  "label": "Escalate",
+  "text": "If blocked twice on one thing, stop and ask.",
+  "doms": [
+   "agent"
+  ]
+ },
+ {
+  "id": "cleanup",
+  "label": "Clean up",
+  "text": "Remove temp files, branches, debug code before finishing.",
+  "doms": [
+   "agent",
+   "code"
+  ]
  }
 ];
 
@@ -304,6 +361,8 @@ window.PS_VOCAB = [
 {"t":"chatgpt vs claude","d":"tech"},
 {"t":"cheap eats nearby","d":"local"},
 {"t":"jump rope workout","d":"fit"},
+{"t":"keep my prs green","d":"agent"},
+{"t":"organize my inbox","d":"agent"},
 {"t":"side hustle ideas","d":"biz"},
 {"t":"vpn do i need one","d":"tech"},
 {"t":"adopt a dog or cat","d":"decide"},
@@ -326,6 +385,7 @@ window.PS_VOCAB = [
 {"t":"keto dinner recipes","d":"cook"},
 {"t":"math help fractions","d":"math"},
 {"t":"nda template simple","d":"legal"},
+{"t":"raise test coverage","d":"agent"},
 {"t":"restaurants near me","d":"local"},
 {"t":"stock vs index fund","d":"money"},
 {"t":"things to do nearby","d":"local"},
@@ -359,11 +419,13 @@ window.PS_VOCAB = [
 {"t":"zero-based budgeting","d":"money"},
 {"t":"analyze this csv data","d":"analyze"},
 {"t":"ankle sprain recovery","d":"health"},
+{"t":"build a data pipeline","d":"agent"},
 {"t":"burnout warning signs","d":"health"},
 {"t":"carry on packing tips","d":"travel"},
 {"t":"clear cache on iphone","d":"tech"},
 {"t":"dna vs rna difference","d":"sci"},
 {"t":"docker compose basics","d":"tech"},
+{"t":"fix all failing tests","d":"agent"},
 {"t":"go to market strategy","d":"biz"},
 {"t":"image for blog header","d":"image"},
 {"t":"image prompt for logo","d":"image"},
@@ -380,6 +442,7 @@ window.PS_VOCAB = [
 {"t":"ozempic pros and cons","d":"health"},
 {"t":"plan a surprise party","d":"plan"},
 {"t":"roast chicken in oven","d":"cook"},
+{"t":"set up ci for my repo","d":"agent"},
 {"t":"sleep better at night","d":"health"},
 {"t":"spanish for beginners","d":"lang"},
 {"t":"study plan for finals","d":"plan"},
@@ -479,6 +542,7 @@ window.PS_VOCAB = [
 {"t":"python indentation error","d":"debug"},
 {"t":"quarterly goals template","d":"plan"},
 {"t":"seo basics for beginners","d":"market"},
+{"t":"set up a deploy pipeline","d":"agent"},
 {"t":"short story prompt ideas","d":"create"},
 {"t":"solve quadratic equation","d":"math"},
 {"t":"song lyrics about summer","d":"create"},
@@ -487,6 +551,7 @@ window.PS_VOCAB = [
 {"t":"typescript vs javascript","d":"code"},
 {"t":"unclog a drain naturally","d":"home"},
 {"t":"validate a business idea","d":"biz"},
+{"t":"watch my logs for errors","d":"agent"},
 {"t":"weekend day trips nearby","d":"local"},
 {"t":"weekend plans when bored","d":"fun"},
 {"t":"weekly schedule template","d":"plan"},
@@ -496,6 +561,7 @@ window.PS_VOCAB = [
 {"t":"algebra word problem help","d":"math"},
 {"t":"anxiety coping techniques","d":"health"},
 {"t":"automate my daily reports","d":"agent"},
+{"t":"babysit this pull request","d":"agent"},
 {"t":"backup my photos to cloud","d":"tech"},
 {"t":"best coffee shops in town","d":"local"},
 {"t":"best time to book flights","d":"travel"},
@@ -531,6 +597,7 @@ window.PS_VOCAB = [
 {"t":"jealousy in a relationship","d":"social"},
 {"t":"llc vs sole proprietorship","d":"biz"},
 {"t":"make friends in a new city","d":"social"},
+{"t":"monitor the deploy tonight","d":"agent"},
 {"t":"privacy policy for website","d":"legal"},
 {"t":"quotes for graduation card","d":"write"},
 {"t":"regex for email validation","d":"code"},
@@ -546,6 +613,7 @@ window.PS_VOCAB = [
 {"t":"ai tools for small business","d":"biz"},
 {"t":"bash script to rename files","d":"code"},
 {"t":"build a chatbot for my site","d":"agent"},
+{"t":"build and deploy my website","d":"agent"},
 {"t":"caption ideas for instagram","d":"social"},
 {"t":"compound interest explained","d":"money"},
 {"t":"cover letter for internship","d":"career"},
@@ -561,6 +629,7 @@ window.PS_VOCAB = [
 {"t":"lasagna recipe from scratch","d":"cook"},
 {"t":"packing list for beach trip","d":"travel"},
 {"t":"percentage increase formula","d":"math"},
+{"t":"refactor this legacy module","d":"agent"},
 {"t":"running shoes for flat feet","d":"shop"},
 {"t":"scrape prices from websites","d":"agent"},
 {"t":"undefined is not a function","d":"debug"},
@@ -571,6 +640,7 @@ window.PS_VOCAB = [
 {"t":"black holes explained simply","d":"sci"},
 {"t":"blog post about productivity","d":"write"},
 {"t":"chess openings for beginners","d":"learn"},
+{"t":"clean up my downloads folder","d":"agent"},
 {"t":"creatine benefits and dosage","d":"fit"},
 {"t":"daily news digest automation","d":"agent"},
 {"t":"debug null pointer exception","d":"debug"},
@@ -616,8 +686,10 @@ window.PS_VOCAB = [
 {"t":"gift for dad who has everything","d":"shop"},
 {"t":"hiring first employee checklist","d":"biz"},
 {"t":"long distance relationship tips","d":"social"},
+{"t":"migrate my database to postgres","d":"agent"},
 {"t":"quiz questions for trivia night","d":"fun"},
 {"t":"weekly meal plan family of four","d":"cook"},
+{"t":"automate my weekly status report","d":"agent"},
 {"t":"best noise cancelling headphones","d":"shop"},
 {"t":"condense this report to one page","d":"summarize"},
 {"t":"invoice template for freelancers","d":"biz"},
@@ -628,6 +700,7 @@ window.PS_VOCAB = [
 {"t":"product launch announcement ideas","d":"market"},
 {"t":"recursion explained with examples","d":"learn"},
 {"t":"onboarding checklist for new hires","d":"biz"},
+{"t":"upgrade all my dependencies safely","d":"agent"},
 {"t":"schedule social posts automatically","d":"agent"},
 {"t":"stretching routine for desk workers","d":"fit"},
 {"t":"business ideas with low startup cost","d":"biz"},
@@ -694,5 +767,11 @@ window.PS_GOLD = [
 {"q":"review my lease","d":"legal","p":"Scan clause-by-clause and return a table of red flags only: clause, plain-English meaning, risk level, exact question to ask the landlord. Check break fees, auto-renewal, deposit deductions, repair duties, guest limits. Flag anything that needs a real lawyer. <paste lease>"},
 {"q":"analyze this data","d":"analyze","p":"Report findings in order of surprise, not column order: 5 bullets max, each with the number that proves it. Then one table of key stats, one caveat about data quality, and the single follow-up metric worth collecting. <paste data>"},
 {"q":"generate a logo","d":"image","p":"First, 3 concept directions in a table: symbol idea, style, palette with hex codes, why it fits the brand. Then one detailed image-generation prompt for the strongest concept — flat vector, scalable, legible at 32px. Brand: <name, industry, vibe>"},
-{"q":"research this topic","d":"agent","p":"Run deep research on <topic and the decision it informs>: executive summary in 5 bullets, a source table (claim, source, date, confidence), points where credible sources disagree, and what remains unknown. Prioritize primary sources over aggregators; max 10 sources."}
+{"q":"research this topic","d":"agent","p":"Run deep research on <topic and the decision it informs>: executive summary in 5 bullets, a source table (claim, source, date, confidence), points where credible sources disagree, and what remains unknown. Prioritize primary sources over aggregators; max 10 sources."},
+{"q":"set up ci for my repo","d":"agent","p":"Set up CI for <my repo> end to end: plan first, detect the stack, add a workflow running tests and lint on every push, verify it passes, and report what you added. Ask before changing anything outside CI config."},
+{"q":"upgrade all my dependencies safely","d":"agent","p":"Upgrade all my dependencies safely: plan the order, bump one group at a time, run the test suite after each change, and roll forward only when green. Ask before any major-version or lockfile-wide change, and finish with a report of what was upgraded, skipped, and why."},
+{"q":"migrate my database schema","d":"agent","p":"Migrate the database schema to <target change>: draft a migration plan, write reversible migrations, apply them to a staging copy first, verify data integrity after each step, and report the outcome. Never drop or overwrite data without asking me first."},
+{"q":"keep my prs green","d":"agent","p":"Keep my open PRs green: check each one, plan fixes for failing checks and merge conflicts, apply them branch by branch, rerun CI to confirm, and report the status of every PR. Ask before force-pushing, closing, or merging anything."},
+{"q":"refactor my codebase","d":"agent","p":"Refactor <the module> without changing behavior: map the current structure, propose a plan, make small verifiable changes with tests passing after each one, and finish with a report of what moved and why. Ask before deleting files or touching public APIs."},
+{"q":"build and deploy my website","d":"agent","p":"Build and deploy my website end to end: plan the pipeline, build the site, run checks, deploy to <hosting target>, verify the live URL responds correctly, and report each step's result. Ask before overwriting an existing deployment or changing DNS."}
 ];
