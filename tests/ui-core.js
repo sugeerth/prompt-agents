@@ -60,7 +60,10 @@ const ok = msg => console.log('  ok:', msg);
       const text = await page.locator('#prompt').innerText();
       if (!text || /undefined|null|\[object/.test(text)) fail(`domain ${d}: bad prompt: ${text}`);
       const words = text.split(/\s+/).length;
-      if (words > 90) fail(`domain ${d}: prompt too long (${words} words)`);
+      // a mission brief for delegated multi-step work earns a bigger budget
+      // than a Q&A prompt — but still a budget
+      const cap = text.startsWith('Mission:') ? 130 : 90;
+      if (words > cap) fail(`domain ${d}: prompt too long (${words} words, cap ${cap})`);
     }
     ok('all 30 domains render sane prompts via UI');
   } else if (domainReport.length) domainReport.forEach(r => fail(r.join(': ')));
@@ -181,15 +184,18 @@ const ok = msg => console.log('  ok:', msg);
     for (let i = 0; i < v.length; i += Math.ceil(v.length / 25)) out.push(v[i].t);
     return out;
   });
-  let total = 0, max = 0, maxT = '';
+  let total = 0, max = 0, maxT = '', sampled = 0, briefMax = 0;
   for (const t of samples) {
     await page.fill('#q', ''); await page.fill('#q', t);
     await page.keyboard.press('Escape');
-    const words = (await page.locator('#prompt').innerText()).split(/\s+/).length;
-    total += words; if (words > max) { max = words; maxT = t; }
+    const ptext = await page.locator('#prompt').innerText();
+    const words = ptext.split(/\s+/).length;
+    if (ptext.startsWith('Mission:')) { briefMax = Math.max(briefMax, words); continue; }
+    total += words; sampled++; if (words > max) { max = words; maxT = t; }
   }
-  console.log(`  avg standard prompt: ${(total / samples.length).toFixed(1)} words, max ${max} ("${maxT}")`);
+  console.log(`  avg standard prompt: ${(total / sampled).toFixed(1)} words, max ${max} ("${maxT}"), briefs up to ${briefMax}`);
   if (max > 80) fail('a standard prompt exceeds 80 words');
+  if (briefMax > 130) fail('a mission brief exceeds 130 words: ' + briefMax);
   else ok('standard prompts stay short');
 
   if (errors.length) { errors.forEach(e => fail('console/page error: ' + e)); }

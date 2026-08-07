@@ -203,6 +203,54 @@ function agentNeed(domId, t) {
   return null;
 }
 
+/* An agent is briefed like an operator, not like a search box: a mission with
+   a verifiable end state, then the rules of engagement. "Done when" is the
+   centerpiece — the single line that most determines whether a long-horizon
+   agent succeeds — and it is derived from the task class, because "done" for
+   a database migration is checksums, not vibes. */
+const AGENT_BRIEF = [
+  { sig: /\b(database|db|schema|migrations?|migrate|tables?|records|dataset)\b/i,
+    done: "the change is applied and a count or checksum check passes",
+    verify: "run the count/checksum before and after; paste both",
+    rule: "back up first; never drop data without asking" },
+  { sig: /\b(keep|watch|monitor(ing)?|alerts?|logs?|uptime|green)\b/i,
+    done: "the first check has run live and you've shown me its output",
+    verify: "say what you'll check, how often, and what triggers action; verify the first check live",
+    rule: "report changes in what you observe, don't act on them without asking" },
+  { sig: /\b(files?|folders?|inbox|photos|downloads|organi[sz]e|rename|clean ?up)\b/i,
+    done: "the approved dry-run list has been applied, nothing else",
+    verify: "dry run first: list what would change and wait for my OK",
+    rule: "never delete — move aside instead" },
+  { sig: /\b(repo|repos|codebase|refactor|ci|cd|tests?|dependenc|deploy|pipeline|prs?|website|app)\b/i,
+    done: "the tests pass before and after, with output pasted",
+    verify: "paste the output that proves it passes",
+    rule: "work in small commits; stay in scope" },
+];
+const AGENT_BRIEF_DEFAULT = {
+  done: "you can show evidence it worked, not just say so",
+  verify: "state how you verified it, with the evidence",
+  rule: "stay in scope",
+};
+
+function buildBrief(t, depth, activeMods, drill) {
+  const cls = AGENT_BRIEF.find(c => c.sig.test(t)) || AGENT_BRIEF_DEFAULT;
+  const segs = [{ text: `Mission: ${t}.`, add: false, kind: "base", label: "Mission" }];
+  const B = (label, body, kind) =>
+    segs.push({ text: `\n${label}: ${body}.`, add: false, kind: kind || "brief", label });
+  B("Done when", cls.done);
+  if (depth >= 1) B("Plan first", "milestones, one line each" +
+    (depth >= 2 ? ", with the main risk of each; checkpoint after each milestone" : ""), "shape");
+  B("Ground rules", cls.rule + "; ask before anything destructive or irreversible" +
+    (depth >= 2 ? "; if blocked twice on one thing, stop and ask" : ""));
+  if (depth >= 1) B("Verify", cls.verify);
+  B("Report", depth === 0
+    ? "one line — done and how verified, or blocked and why"
+    : "what changed, how you verified it, what remains");
+  for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
+  if (drill) segs.push({ text: DRILL, add: false, kind: "drill" });
+  return segs;
+}
+
 const AUDIENCE = [
   "Assume I know nothing about this.",
   null,
@@ -231,6 +279,7 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
     if (stripped.trim()) t = stripped.trim();
   }
   if (!t) return [];
+  if (domId === "agent") return buildBrief(t, depth, activeMods, drill);
   const segs = [{ text: dom.base(t), add: false, kind: "base" }];
   if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
   const classNeed = agentNeed(domId, t);
@@ -498,7 +547,9 @@ function currentSegs() {
      answer-shape sentence and its size caps — say what's wanted, not how long
      the reply may be. */
   if (state.steer === "guided") {
-    for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
+    // the mission brief is a behavioral contract, not an answer shape — keep it whole
+    if (domId !== "agent")
+      for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
     segs.splice(1, 0, ...intentSegs());
   }
   // reasoning goes before the go-deeper menu and the paste marker
@@ -541,7 +592,12 @@ function update() {
     const hint = SEG_HINTS[s.kind];
     const cls = (s.add ? "adds" : "") + (hint ? " seg" : "");
     const attrs = hint ? ` data-i="${i}" title="${hint}"` : "";
-    return `<span class="${cls.trim()}"${attrs}>${s.text.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>`;
+    let body = s.text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    if (s.label) {
+      const at = body.indexOf(s.label + ":");
+      if (at >= 0) body = body.slice(0, at) + "<b>" + s.label + ":</b>" + body.slice(at + s.label.length + 1);
+    }
+    return `<span class="${cls.trim()}"${attrs}>${body}</span>`;
   }).join(" ");
   const text = segsToText(segs);
   countEl.textContent = text.split(/\s+/).length + " words";
@@ -768,7 +824,7 @@ const EXAMPLES = [
   "explain machine learning",
   "10 days in japan with kids on a tight budget",
   "fix my resume",
-  "best tacos near me",
+  "set up ci for my repo",
 ];
 const examplesEl = $("examples");
 examplesEl.innerHTML = `<span class="exlabel">Try one:</span>` +
