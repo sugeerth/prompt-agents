@@ -312,7 +312,28 @@ const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "ma
     return [];
   }
 
+  /* --- what the graph tells a mission brief -------------------------------
+     The brief consumes the reasoning layer instead of duplicating it:
+       milestones  the ask's own critical path, sanitized, becomes the plan
+       tension     a Tarjan cycle of named goals becomes a Watch-out line
+       rigor       the complexity ladder governs how much contract to spend —
+                   an L3 coupled hand-off earns checkpoints and stop rules on
+                   its own, a trivial one stays terse
+     Slots go through the same taint/sanitize path as every derived line. */
+  function briefSignals(metrics) {
+    const g = metrics.graph || {};
+    const path = (g.criticalPath && g.criticalPath.length >= 2)
+      ? safeSlots(g.criticalPath, g.tainted) : [];
+    let tension = null;
+    if (g.cyclic && g.cyclic.length && g.cycleGroups[0] && g.cycleGroups[0].length >= 2) {
+      const named = safeSlots(g.cycleGroups[0], g.tainted);
+      if (named.length >= 2) tension = named.slice(0, 2).join(" and ");
+    }
+    const rigor = metrics.level >= 3 ? 2 : metrics.level === 2 ? 1 : 0;
+    return { milestones: path.length >= 2 ? path.slice(0, 4) : null, tension, rigor };
+  }
+
   const LEVEL_NAME = ["Atomic", "Shaped", "Composite", "Coupled"];
 
-  window.PS_REASON = { analyze, scaffoldFor, graphFindings, LEVEL_NAME };
+  window.PS_REASON = { analyze, scaffoldFor, graphFindings, briefSignals, LEVEL_NAME };
 })();

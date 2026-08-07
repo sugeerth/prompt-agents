@@ -234,16 +234,33 @@ const AGENT_BRIEF_DEFAULT = {
 
 function buildBrief(t, depth, activeMods, drill) {
   const cls = AGENT_BRIEF.find(c => c.sig.test(t)) || AGENT_BRIEF_DEFAULT;
+
+  /* The brief consumes the reasoning layer. The graph's critical path becomes
+     the plan, a discovered cycle becomes a Watch-out, and the complexity
+     ladder governs rigor: a coupled hand-off earns checkpoints and stop rules
+     even at Standard depth, a trivial one stays terse. Depth remains the
+     user's override upward — auto-rigor never lowers what they asked for. */
+  const sig = (REASON && REASON.briefSignals && state.reason !== "off")
+    ? REASON.briefSignals(REASON.analyze(t))
+    : { milestones: null, tension: null, rigor: 0 };
+  const rigor = Math.max(depth, sig.rigor);
+
   const segs = [{ text: `Mission: ${t}.`, add: false, kind: "base", label: "Mission" }];
-  const B = (label, body, kind) =>
-    segs.push({ text: `\n${label}: ${body}.`, add: false, kind: kind || "brief", label });
+  const B = (label, body, kind, add) =>
+    segs.push({ text: `\n${label}: ${body}.`, add: !!add, kind: kind || "brief", label });
   B("Done when", cls.done);
-  if (depth >= 1) B("Plan first", "milestones, one line each" +
-    (depth >= 2 ? ", with the main risk of each; checkpoint after each milestone" : ""), "shape");
+  if (rigor >= 1) {
+    const plan = sig.milestones
+      ? `${sig.milestones.join(" → ")}, one line each`
+      : "milestones, one line each";
+    B("Plan first", plan + (rigor >= 2 ? ", with the main risk of each; checkpoint after each milestone" : ""), "shape");
+  }
   B("Ground rules", cls.rule + "; ask before anything destructive or irreversible" +
-    (depth >= 2 ? "; if blocked twice on one thing, stop and ask" : ""));
-  if (depth >= 1) B("Verify", cls.verify);
-  B("Report", depth === 0
+    (rigor >= 2 ? "; if blocked twice on one thing, stop and ask" : ""));
+  if (sig.tension)
+    B("Watch out", `${sig.tension} pull against each other — surface the tradeoff before committing`, "brief", true);
+  if (rigor >= 1) B("Verify", cls.verify);
+  B("Report", rigor === 0
     ? "one line — done and how verified, or blocked and why"
     : "what changed, how you verified it, what remains");
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
@@ -477,6 +494,10 @@ chipsEl.addEventListener("click", e => {
    the same thing is two lines too many. */
 function reasonSegs(domId) {
   if (!REASON || !state.topic.trim()) return [];
+  /* The mission brief consumes the reasoning layer directly — its Plan,
+     Watch-out and rigor ARE the reasoning output. Appending the generic
+     scaffold after it would say everything twice. */
+  if (domId === "agent") return [];
   const m = REASON.analyze(state.topic);
   const out = REASON.scaffoldFor(m, domId, state.reason, state.steer === "native" ? "native" : "shaped")
     .map(s => ({ text: s.text, add: true, kind: s.kind }));
