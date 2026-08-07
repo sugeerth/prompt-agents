@@ -109,6 +109,20 @@ const ok = m => console.log('  ok:', m);
   if (!(await text()).includes('Verify:')) fail('brief Verify line missing on complex agent ask');
   else ok('the brief carries its own Verify line');
 
+  // 7b. the brief consumes the reasoning layer: milestones, auto-rigor, watch-out
+  await set('set up the database then deploy the api then configure monitoring for my repo');
+  if (!(await text()).includes('Plan first:') || !(await text()).includes('→'))
+    fail('graph milestones missing from plan: ' + await text());
+  else ok("the graph's critical path becomes the brief's plan");
+  await set('migrate my database balancing speed against safety on a tight budget');
+  let bt = await text();
+  if (!bt.includes('blocked twice')) fail('L3 coupled ask did not auto-escalate rigor: ' + bt);
+  else ok('a coupled hand-off earns stop rules at Standard depth on its own');
+  if (!bt.includes('Watch out:')) fail('cycle not surfaced as Watch out: ' + bt);
+  else ok("Tarjan's cycle becomes a Watch-out line");
+  if (bt.includes('Reason as long as you need')) fail('generic scaffold duplicates the brief');
+  else ok('the brief absorbs the reasoning — no generic scaffold appended');
+
   // 8. gold cache serves agent tasks as ★ suggestions
   await page.fill('#q', ''); await page.fill('#q', 'set up ci');
   await page.waitForTimeout(80);
