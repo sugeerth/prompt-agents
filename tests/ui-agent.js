@@ -44,15 +44,16 @@ const ok = m => console.log('  ok:', m);
   await set('migrate my database end to end');
   const t = await text();
   for (const [what, re] of [
-    ['a verifiable framing', /end to end/i],
-    ['plan-first', /plan first/i],
-    ['stepwise verification', /verif/i],
-    ['a destructive-action guard', /destructive|irreversible/i],
-    ['a completion report', /finish with|report/i],
+    ['mission framing', /^Mission:/],
+    ['a verifiable end state', /Done when:/],
+    ['plan-first', /Plan first:/],
+    ['ground rules with a destructive guard', /Ground rules:.*destructive|irreversible/i],
+    ['explicit verification', /Verify:/],
+    ['a completion report', /Report:/],
   ]) {
-    if (!re.test(t)) fail(`harness missing ${what}: ${t}`);
+    if (!re.test(t)) fail(`brief missing ${what}: ${t}`);
   }
-  ok('Shaped emits the full harness: plan → execute → verify → guard → report');
+  ok('delegated asks build a mission brief: Mission → Done when → Plan → Rules → Verify → Report');
 
   // 5. depth scales the harness: TL;DR stays terse, Deep adds stop rules + checkpoints
   await page.locator('#depth').fill('0');
@@ -84,9 +85,9 @@ const ok = m => console.log('  ok:', m);
   // 6b. the harness specializes by task class: each class names its own proof
   let classesOK = true;
   for (const [q, snippet, cls] of [
-    ['migrate my database schema', 'Back up first', 'data'],
+    ['migrate my database schema', 'count or checksum', 'data'],
     ['keep my prs green', "what you'll check, how often", 'ongoing/ops'],
-    ['clean up my downloads folder', 'Dry run first', 'files'],
+    ['clean up my downloads folder', 'dry run first', 'files'],
     ['refactor my codebase', 'paste the output that proves it passes', 'code'],
   ]) {
     await set(q);
@@ -101,10 +102,12 @@ const ok = m => console.log('  ok:', m);
   else ok('class preconditions survive Native');
   await steer('Guided');
 
-  // 7. agent asks get the verification line from the reasoning layer at L2+
+  // 7. the brief's explicit Verify line replaces the generic one — no duplication
   await set('migrate my database then update the api then notify the team');
-  if (!(await text()).includes('Check the answer once')) fail('agent ask missing verify line: ' + await text());
-  else ok('complex agent asks get the verification line');
+  if ((await text()).includes('Check the answer once')) fail('generic verify line duplicates the brief');
+  else ok('no duplicate generic verify line on agent asks');
+  if (!(await text()).includes('Verify:')) fail('brief Verify line missing on complex agent ask');
+  else ok('the brief carries its own Verify line');
 
   // 8. gold cache serves agent tasks as ★ suggestions
   await page.fill('#q', ''); await page.fill('#q', 'set up ci');
