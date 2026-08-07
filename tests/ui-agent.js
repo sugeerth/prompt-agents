@@ -109,6 +109,21 @@ const ok = m => console.log('  ok:', m);
   if (!(await text()).includes('Verify:')) fail('brief Verify line missing on complex agent ask');
   else ok('the brief carries its own Verify line');
 
+  // 6d. the harness is generic: everyday hand-offs get class-appropriate briefs
+  let genOK = true;
+  for (const [q, snippet, cls] of [
+    ['book a plumber to fix my sink', 'never spend or cancel without my explicit OK', 'purchase/booking'],
+    ['research the best health insurance for me', 'source', 'research'],
+    ['reach out to vendors and schedule tastings for my wedding', 'never send on my behalf', 'outreach'],
+    ['renew my car registration for me', 'price and terms before committing', 'purchase/renewal'],
+  ]) {
+    await set(q);
+    const bt2 = await text();
+    if (!bt2.startsWith('Mission:')) { fail(`generic hand-off "${q}" did not build a brief: ` + bt2); genOK = false; }
+    if (!bt2.includes(snippet)) { fail(`class ${cls} guard missing on "${q}": ` + bt2); genOK = false; }
+  }
+  if (genOK) ok('everyday hand-offs (plumber, insurance, vendors, renewals) get class-appropriate briefs');
+
   // 7b. the brief consumes the reasoning layer: milestones, auto-rigor, watch-out
   await set('set up the database then deploy the api then configure monitoring for my repo');
   if (!(await text()).includes('Plan first:') || !(await text()).includes('→'))

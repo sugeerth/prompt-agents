@@ -66,10 +66,12 @@
         [/\bautomat(e|ing|ion)\b/, 3],
         [/\bbuild and (deploy|ship|publish)\b/, 3],
         [/^(set ?up|migrate|deploy|refactor|integrate|provision|maintain)\b/, 2.5],
+        // everyday hand-offs, not just developer ones
+        [/^(book|order|renew|cancel|research|handle|coordinate|arrange|reach out|contact|follow up)\b/, 2.5],
         [/\bfor me\b/, 2.5],
         [/\b(keep|watch|monitor) (my|the|our)\b/, 2.5],
         // an imperative aimed at YOUR OWN infrastructure is a hand-off, not a how-to
-        [/\b(my|our) (repos?|codebase|database|servers?|site|website|app|logs|prs?|dependencies|pipeline|backlog|inbox|downloads|files|folders|photos)\b/, 1.5],
+        [/\b(my|our) (repos?|codebase|database|servers?|site|website|app|logs|prs?|dependencies|pipeline|backlog|inbox|downloads|files|folders|photos|calendar|newsletter|subscriptions?|invoices?|finances|clients|vendors|bookings?|insurance|taxes|registration)\b/, 1.5],
         // imperative housekeeping on your own stuff is also a hand-off
         [/^(clean ?up|sort|tidy|organi[sz]e)\b.*\b(my|our)\b/, 2.5],
         [/\b(pipeline|workflow|cron)\b/, 1.5],
