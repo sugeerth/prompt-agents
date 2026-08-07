@@ -40,6 +40,7 @@ const CORPUS = [
 
   // do — wants to perform it
   ['how do i change a tire', 'do'],
+  ['how do i book a flight', 'do'],
   ['how to set up a home network', 'do'],
   ['walk me through filing taxes', 'do'],
   ['install python on a mac', 'do'],
@@ -51,6 +52,9 @@ const CORPUS = [
   ['build and deploy a landing page', 'delegate'],
   ['keep my prs green end to end', 'delegate'],
   ['monitor my logs for errors', 'delegate'],
+  ['book a plumber to fix my sink', 'delegate'],
+  ['research the best health insurance for me', 'delegate'],
+  ['renew my car registration for me', 'delegate'],
 
   // fix — wants it working
   ['fix my login bug', 'fix'],
