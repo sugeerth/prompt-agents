@@ -5,8 +5,8 @@
   "description": "Type less, get exactly what you want \u2014 a client-side prompt builder with a reasoning layer.",
   "scripts": {
     "test": "npm run test:eval && npm run test:ui",
-    "test:eval": "node tests/graph-eval.js && node tests/reasoning-eval.js && node tests/intent-eval.js && node tests/chain-eval.js && node tests/profile-eval.js && node tests/bridge-eval.js",
-    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js && node tests/ui-steer.js && node tests/ui-goodhart.js && node tests/ui-agent.js && node tests/ui-chain.js && node tests/ui-pad.js"
+    "test:eval": "node tests/graph-eval.js && node tests/reasoning-eval.js && node tests/intent-eval.js && node tests/chain-eval.js && node tests/profile-eval.js && node tests/bridge-eval.js && node tests/data-eval.js",
+    "test:ui": "node tests/ui-core.js && node tests/ui-interactive.js && node tests/ui-similarity.js && node tests/ui-reasoning.js && node tests/ui-steer.js && node tests/ui-goodhart.js && node tests/ui-agent.js && node tests/ui-chain.js && node tests/ui-pad.js && node tests/ui-quality.js"
   },
   "devDependencies": {
     "playwright": "^1.47.0"

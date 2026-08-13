@@ -38,11 +38,16 @@ const ok = m => console.log('  ok:', m);
   if ((await metrics()).includes('hand it off')) fail('how-to wrongly read as delegation');
   else ok('a how-to still reads as do-it-myself');
 
-  // 3. Guided carries the delegation intent line
+  /* 3. The brief itself states the delegation — a Mission with a Done-when
+        clause already says "the result, not instructions", so repeating it as
+        an intent line was 10 words of pure restatement. */
   await set('automate my weekly report');
-  if (!(await text()).includes('I want the result, not instructions'))
-    fail('delegation intent line missing: ' + await text());
-  else ok('Guided states the delegation goal');
+  const dt = await text();
+  if (!/^Mission:/.test(dt) || !/Done when:/.test(dt))
+    fail('delegated ask did not state the mission: ' + dt);
+  else if (/I want the result, not instructions/.test(dt))
+    fail('brief repeats the delegation goal it already states: ' + dt);
+  else ok('the brief states the delegation once, in the Mission line');
 
   // 4. Shaped builds the full agent harness: plan, verify, safety, report
   await steer('Shaped');

@@ -1,2 +1,4 @@
 node_modules/
 *.png
+# scratch worktrees created when work is farmed out to a parallel agent
+.claude/

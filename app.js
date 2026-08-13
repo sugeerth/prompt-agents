@@ -12,7 +12,12 @@ const GENERIC_SHAPES = [
 ];
 
 const DOMAINS = {
-  learn:     { em:"📚", label:"Learn",     base:t=>`Explain ${t}.`, shapes:[
+  /* A bare topic gets "Explain X"; a question that already reads as one keeps
+     its own words, because "Explain why is the sky blue" is broken English and
+     it is the first thing the user sees. */
+  learn:     { em:"📚", label:"Learn",
+    base:t=>/^(why|how|when|where|which|who|is|are|was|were|do|does|did|can|could|should|would|will)\b/i.test(t)
+      ? `Help me understand: ${t}.` : `Explain ${t}.`, shapes:[
     "Core idea only, 3 short sentences.",
     "Core idea in 2 sentences, then the 3 things that matter most, then one real example. Max 120 words.",
     "Intuition first, then how it works step by step, one worked example, and the most common misconception. Max 350 words." ]},
@@ -114,21 +119,41 @@ const SIGS = [
   ["code",    /\b(code|function|script|python|javascript|typescript|sql|regex|api|refactor|algorithm|component)\b/i],
   ["email",   /\b(email|e-mail|reply to|follow ?up)\b/i],
   ["summarize",/\b(summariz|summary|tl;?dr|key points|recap|condense)/i],
+  // explicit arithmetic is a calculation whatever the subject: "18% of 340 plus
+  // tax" wants a number, not a finance lesson, so it outranks the money cue
+  ["math",    /\d+\s*%\s*of\b|\d+\s*[+\-*\/x]\s*\d+|\bhow much is\b/i],
   ["cook",    /\b(recipe|cook|bake|dinner|meal|marinade|air fryer|slow cooker)\b/i],
   ["local",   /\b(near me|nearby|nearest|closest|around here|in town|directions to|places to (see|eat|visit)|hidden gems|things to do|day trips?)\b/i],
   ["travel",  /\b(trip|itinerary|travel|vacation|days? in|visit)\b/i],
   // "on a budget" is a constraint on some other ask, not a finance question
   ["money",   /\b(invest|salary|mortgage|loan|savings?|retire|tax|debt|401k|credit)\b|\bbudgeting\b|\bbudget (for|of|plan|breakdown|spreadsheet)\b|\bmy budget\b/i],
-  ["fit",     /\b(workout|gym|exercise|run(ning)?|strength|cardio|stretch|muscle)\b/i],
-  ["health",  /\b(sleep|diet|pain|symptom|doctor|anxiety|stress|vitamin|allerg)\b/i],
-  ["parent",  /\b(toddler|baby|kid|child|teen|potty|tantrum)\b/i],
+  ["fit",     /\b(workout|gym|exercise|cardio|stretch|reps|squat|deadlift|marathon|5k|10k)\b|\bstrength training\b|\brunning (shoes|plan|form|pace)\b|\b(couch to 5k|weight training)\b/i],
+  // parenting outranks health: "my toddler won't sleep" is about the toddler
+  ["parent",  /\b(toddler|baby|kid|child|teen|potty|tantrum|newborn|nursery)\b/i],
+  ["health",  /\b(sleep|diet|pain|symptom|doctor|anxiety|stress|vitamin|allerg|chest pain|dizzy|fever|rash|hurts?|ache|sore|injur|swollen)\b/i],
+  /* Nine domains had good hand-tuned shapes and no way to reach them by
+     typing — they existed only behind a suggestion click. These are the
+     everyday categories people actually bring to an AI, so the legal shape
+     that says "when you genuinely need a lawyer" now fires for the person
+     asking about their deposit. */
+  ["legal",   /\b(landlord|tenant|deposit|evict|sue|lawsuit|lawyer|attorney|contract|my rights|small claims|custody|divorce|fired|wrongful|liable|warranty|refund policy|employer|fire me|my landlord)\b|\bmy lease\b|\blease (agreement|terms)\b|\bbreak the lease\b/i],
+  ["career",  /\b(resume|cv|cover letter|laid off|promotion|a raise|interview|job offer|my manager|my boss|quit my job|career|underpaid|performance review)\b/i],
+  ["home",    /\b(drain|leak|clog|plumb|faucet|paint the|drywall|mow|lawn|gutter|furnace|thermostat|mold|landlord fix|hang a|garage|declutter)\b/i],
+  ["social",  /\b(what should i say|what do i say|apolog|condolence|awkward|text back|break the news|difficult conversation|toast|eulogy)\b/i],
+  ["lang",    /\b(in spanish|in french|in japanese|in german|in italian|translate|pronounce|conjugat|fluent)\b/i],
+  ["sci",     /\b(physics|chemistry|biology|astronomy|evolution|quantum|molecule|galaxy|climate change|vaccine)\b/i],
+  ["market",  /\b(marketing|seo|advertis|campaign|audience|brand|social media|newsletter|landing page|conversion)\b/i],
+  ["biz",     /\b(business|startup|revenue|customers?|pricing|competitors?|invoice|freelanc|llc|profit margin)\b/i],
+  ["fun",     /\b(party game|board game|trivia|joke|riddle|things to do tonight|date night|icebreaker)\b/i],
   ["decide",  /\b(vs\.?|versus|should i|or should|which is|better|worth it|choose|decide)\b/i],
   ["shop",    /\b(buy|best (cheap|budget)|under \$|which .*to get|recommend a)\b/i],
   ["write",   /\b(write|draft|essay|blog|post|caption|bio|speech|story|resume|cover letter)\b/i],
   ["image",   /\b(image|logo|illustration|poster|icon|midjourney|art)\b/i],
   ["plan",    /\b(plan|organize|checklist|prepare|schedule)\b/i],
-  ["math",    /\b(calculate|solve|equation|percent|probability|geometry)\b/i],
-  ["learn",   /\b(explain|what is|what are|how does|difference between|understand|learn)\b/i],
+  ["math",    /\b(calculate|solve|equation|percent|probability|geometry)\b|\d+\s*%|\d+\s*[+\-*\/x]\s*\d+/i],
+  // "learn" only counts as a cue where it heads the ask or takes an object
+  // clause — "i want to get fit and learn spanish" is a plan, not a lesson
+  ["learn",   /\b(explain|what is|what are|how does|difference between|understand)\b|^learn\b|\blearn (about|how)\b/i],
   ["agent",   /\b(automate|workflow|step by step task|pipeline|agent)\b/i],
 ];
 
@@ -151,7 +176,11 @@ function detectDomain(text) {
   if (r && r.id === "delegate" && r.confidence >= 0.5) return "agent";
   for (const [id, re] of SIGS) {
     if (!re.test(text)) continue;
-    if (r && r.id === "check" && r.confidence >= 0.6 && ARTIFACT_DOMAINS.has(id)) return "analyze";
+    /* "review my resume" and "fix my resume" are the same request — judge a
+       thing that already exists. Framing either as "draft this" answers a
+       question nobody asked. */
+    if (r && (r.id === "check" || r.id === "fix") && r.confidence >= 0.6 && ARTIFACT_DOMAINS.has(id))
+      return "analyze";
     return id;
   }
   if (r && r.confidence >= 0.5 && INTENT_DOMAIN[r.id]) return INTENT_DOMAIN[r.id];
@@ -282,7 +311,6 @@ function buildBrief(t, depth, activeMods, drill) {
     ? "one line — done and how verified, or blocked and why"
     : "what changed, how you verified it, what remains");
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
-  if (drill) segs.push({ text: DRILL, add: false, kind: "drill" });
   return segs;
 }
 
@@ -297,9 +325,9 @@ const AUDIENCE = [
    you're after, not how it should look. Standard says nothing, because the
    middle of a slider should not add a sentence. */
 const WANT = [
-  "Keep it short — I want the essentials, not the full picture.",
+  "Keep it short — just the essentials.",
   null,
-  "Go thorough — I'd rather have the whole picture than a quick answer.",
+  "Go deep — I'd rather have the whole picture.",
 ];
 
 function shapeFor(dom, depth) {
@@ -312,7 +340,15 @@ function shapeFor(dom, depth) {
 
 /* One line that turns every answer into progressive disclosure:
    tight reply first, numbered drill-downs the user can pick from. */
-const DRILL = "End with 3 numbered one-line ways to go deeper; I'll pick by number.";
+const DRILL = "Then 3 numbered ways to go deeper.";
+
+/* The follow-up menu is what makes a short answer safe: it says "there is
+   more, ask for it". But an agent executing a mission does not offer its
+   operator three ways to go deeper, and an image prompt has nothing to drill
+   into — so those are the two places it stays out of. */
+function effectiveDrill(domId) {
+  return state.drill && domId !== "agent" && domId !== "image" && state.steer !== "native";
+}
 
 /* Build the prompt as typed segments — every piece knows what produced it,
    so the rendered prompt can be edited by clicking the piece itself. */
@@ -323,7 +359,10 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
     const stripped = t.replace(STRIPS[domId], "");
     if (stripped.trim()) t = stripped.trim();
   }
-  if (!t) return [];
+  /* A single word that is only a framing verb carries no ask — echoing it back
+     as "Help me plan: plan." is worse than showing nothing. */
+  if (!t || /^(plan|write|draft|fix|explain|summari[sz]e|analy[sz]e|review|help|make|create|build|design)$/i.test(t))
+    return [];
   if (domId === "agent") return buildBrief(t, depth, activeMods, drill);
   const segs = [{ text: dom.base(t), add: false, kind: "base" }];
   if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
@@ -337,8 +376,7 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
-  if (drill && domId !== "image" && state.steer !== "native")
-    segs.push({ text: DRILL, add: false, kind: "drill" });
+  if (drill) segs.push({ text: DRILL, add: false, kind: "drill" });
   if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
   return segs;
 }
@@ -596,18 +634,47 @@ function externalSegs() {
   return BRIDGE.findings().map(s => ({ text: s.text, add: true, kind: "graph" }));
 }
 
+/* Where the domain's own framing already carries the goal. "Help me decide:"
+   followed by "I have to make a call here" is one sentence written twice, and
+   this pairing accounted for 8-14 wasted words on roughly half of all asks. */
+const INTENT_IMPLIED = {
+  decide: ["decide"], make: ["write", "email", "image"],
+  plan: ["plan", "travel"], delegate: ["agent"], find: ["local", "shop"],
+  explore: ["create"], check: ["analyze"], do: ["cook"],
+};
+/* Only pairs where the prefix says the whole thing. "Help me decide:" and "I
+   need to make a call" are one sentence written twice. "Tech help:" and "Lead
+   with what is actually wrong" are not — the second states a behaviour the
+   first only hints at, and dropping it would be trading meaning for brevity
+   rather than cutting waste. */
+
 /* What the user WANTS, stated once — never how to format it. */
-function intentSegs() {
+function intentSegs(domId) {
   if (!INTENT || state.noIntent || !state.topic.trim()) return [];
   const r = INTENT.recognize(state.topic);
   const out = [];
-  if (r.line && r.confidence >= 0.4) out.push({ text: r.line, add: true, kind: "intent" });
-  // when the goal genuinely isn't readable, asking beats guessing wrong —
-  // a bare topic ("sourdough") is the clearest case of all
-  else if (r.confidence < 0.35)
+  if (r.line && r.confidence >= 0.4) {
+    /* Native has no domain prefix at all — the base line is the user's own
+       words — so nothing is implied there and the goal must still be said. */
+    const framed = state.steer !== "native";
+    if (!framed || !(INTENT_IMPLIED[r.id] || []).includes(domId))
+      out.push({ text: r.line, add: true, kind: "intent" });
+  }
+  /* Asking beats guessing — but only where there is genuinely nothing to go
+     on. A well-formed question, or an ask long enough to carry its own
+     context, is not ambiguous just because no cue fired; offering to ask a
+     question there costs 12 words and an extra round trip. A bare topic
+     ("sourdough") is the case this exists for. */
+  else if (r.confidence < 0.22 && !isWellFormed(state.topic))
     out.push({ text: INTENT.CLARIFY, add: true, kind: "intent" });
   return out;
 }
+
+const isWellFormed = t => {
+  const x = t.trim();
+  return /\?$/.test(x) || x.split(/\s+/).length >= 5 ||
+    /^(is|are|can|could|do|does|did|should|would|will|am|has|have|what|why|how|when|where|which|who)\b/i.test(x);
+};
 
 const tidy = t => {
   const s = t.trim().replace(/\s+/g, " ");
@@ -655,7 +722,7 @@ function stepSegs() {
     if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
     const nClassNeed = agentNeed(domId, state.topic);
     if (nClassNeed && !state.noNeed) segs.push({ text: nClassNeed, add: true, kind: "need" });
-    segs.push(...intentSegs());
+    segs.push(...intentSegs(domId));
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
     segs.push(...reasonSegs(domId));
@@ -666,16 +733,16 @@ function stepSegs() {
     // cached hand-tuned prompt for a top query: served as-is, still composable
     const g = state.gold;
     const segs = [{ text: g.p, add: false, kind: "base" }];
-    if (state.steer === "guided") segs.push(...intentSegs());
+    if (state.steer === "guided") segs.push(...intentSegs(g.d));
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
     segs.push(...reasonSegs(g.d));
     segs.push(...externalSegs());
-    if (state.drill && g.d !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
+    if (effectiveDrill(g.d)) segs.push({ text: DRILL, add: false, kind: "drill" });
     return segs;
   }
   const domId = state.domain || detectDomain(state.topic);
-  const segs = buildPrompt(state.topic, domId, state.depth, state.tone, active, state.drill);
+  const segs = buildPrompt(state.topic, domId, state.depth, state.tone, active, effectiveDrill(domId));
   if (!segs.length) return segs;
   /* Guided: keep the domain's framing and the follow-up menu, but drop the
      answer-shape sentence and its size caps — say what's wanted, not how long
@@ -689,11 +756,18 @@ function stepSegs() {
        saying what the answer must look like. */
     if (domId !== "agent" && WANT[state.depth])
       extra.push({ text: WANT[state.depth], add: true, kind: "want" });
-    segs.splice(1, 0, ...intentSegs());
+    segs.splice(1, 0, ...intentSegs(domId));
   }
   // reasoning goes before the go-deeper menu and the paste marker
   extra.push(...reasonSegs(domId));
   extra.push(...externalSegs());
+  /* Two answer shapes in one prompt is a contradiction the model has to pick a
+     side of. When the reasoning layer has already fixed the output contract,
+     the domain's own shape sentence yields — the scaffold is the more specific
+     instruction, and it was chosen because this ask earned it. The mission
+     brief is exempt: its "shape" segment is the plan, not a shape. */
+  if (domId !== "agent" && extra.some(x => /show only/.test(x.text)))
+    for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
   const at = segs.findIndex(s => s.kind === "drill" || s.kind === "marker");
   if (at === -1) segs.push(...extra); else segs.splice(at, 0, ...extra);
   return segs;
@@ -714,10 +788,17 @@ const SEG_HINTS = {
   want: "How much you asked for — click to reset to Standard",
 };
 
+/* The app has two states: waiting for a topic, and working on one. Everything
+   below the card belongs to the second, so it isn't rendered in the first —
+   the controls arrive at the moment they can actually do something. A chain in
+   progress counts as working, or the controls would vanish between steps. */
 function syncExamples() {
+  const live = !!(state.topic.trim() || state.chain.length);
   // looked up lazily: update() runs during init, before the examples row renders
   const el = document.getElementById("examples");
-  if (el) el.style.display = state.topic.trim() ? "none" : "flex";
+  if (el) el.style.display = live ? "none" : "flex";
+  const m = document.querySelector("main");
+  if (m) m.classList.toggle("live", live);
 }
 
 function update() {
@@ -725,8 +806,15 @@ function update() {
   if (state.topic.trim()) applyRemembered(state.domain || detectDomain(state.topic));
   const segs = currentSegs();
   if (!segs.length) {
+    // no prompt means nothing to report on — pills describing an empty ask are
+    // the app analysing something the user cannot see
+    metricsEl.innerHTML = "";
+    graphEl.classList.remove("open");
     promptEl.className = "empty";
-    promptEl.textContent = "Your prompt appears here as you type — short, specific, ready to paste. Click any part of it to change or remove that part.";
+    /* Says something the subtitle above doesn't: what to DO with the prompt
+       once it's here. Two restatements of the same promise on one screen is
+       one too many. */
+    promptEl.textContent = "Your prompt appears here as you type. Tap any part of it to change that part — then ⏎ copies.";
     countEl.textContent = "";
     return;
   }

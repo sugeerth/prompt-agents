@@ -36,6 +36,9 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
     await page.waitForTimeout(40);
   };
 
+  // The axes only exist once there is a prompt to shape, so give it one first.
+  await set('explain machine learning');
+
   // 1. default posture is Guided — not the most forcing one
   if ((await page.locator('#steerOut').innerText()) !== 'Guided') fail('default steer is not Guided');
   else ok('defaults to Guided, not Shaped');
@@ -65,7 +68,7 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
   else ok("Native leads with the user's own words");
 
   // 5. Native still carries intent
-  if (!t.includes('I want this working')) fail('Native lost the intent line: ' + t);
+  if (!t.includes('Lead with what is actually wrong')) fail('Native lost the intent line: ' + t);
   else ok('Native still states what the user wants');
 
   // 6. Depth is hidden where it would do nothing
@@ -82,7 +85,7 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
   await steer('Guided');
   await set('explain machine learning');
   t = await text();
-  if (!t.includes('I want to genuinely understand')) fail('Guided lost the intent line: ' + t);
+  if (!t.includes('Help me actually understand this')) fail('Guided lost the intent line: ' + t);
   else ok('Guided states intent');
   if (/max \d+ words/i.test(t)) fail('Guided imposed a word cap: ' + t);
   else ok('Guided sets no word cap');
@@ -110,7 +113,7 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
   await set('sourdough');
   if (!(await metrics()).includes('goal unclear')) fail('did not admit unclear goal: ' + await metrics());
   else ok('admits when the goal is unclear');
-  if (!(await text()).includes('ask me one question')) fail('no clarifying fallback on a bare topic');
+  if (!(await text()).includes('Ask me one question')) fail('no clarifying fallback on a bare topic');
   else ok('bare topic asks a question instead of guessing');
 
   // 11. a review request is not framed as a drafting request
@@ -121,8 +124,8 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
 
   // 12. intent line is removable like every other piece
   await set('my wifi keeps dropping');
-  await page.locator('#prompt .seg', { hasText: 'I want this working' }).click();
-  if ((await text()).includes('I want this working')) fail('clicking the intent line did not remove it');
+  await page.locator('#prompt .seg', { hasText: 'Lead with what is actually wrong' }).click();
+  if ((await text()).includes('Lead with what is actually wrong')) fail('clicking the intent line did not remove it');
   else ok('intent line is clickable-removable');
 
   // 13. intent informs the domain when no topic cue fires

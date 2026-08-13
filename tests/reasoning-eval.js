@@ -106,7 +106,13 @@ for (const [q, want] of CORPUS.filter(c => c[1] === 0)) {
 for (const [q] of CORPUS.filter(c => c[1] >= 2)) {
   for (const s of scaffoldFor(analyze(q), 'general', 'auto')) {
     if (s.kind !== 'reason') continue;
-    if (!/Reason as long as you need/.test(s.text)) bad(`scaffold suppresses reasoning: "${s.text}"`);
+    /* The property, not one blessed sentence: the scaffold must hand the model
+       unbounded thinking time, and must never ask it to think LESS. Pinning
+       this to an exact string made a pure rewording look like a regression. */
+    if (!/\b(reason|think) as long as you need\b/i.test(s.text))
+      bad(`scaffold does not grant unbounded reasoning: "${s.text}"`);
+    if (/\b(briefly|be brief|keep it short|concisely|in a few words|don'?t overthink)\b/i.test(s.text))
+      bad(`scaffold suppresses reasoning: "${s.text}"`);
     if (!/show only/.test(s.text)) bad(`scaffold has no output contract: "${s.text}"`);
     if (!/one line of why/.test(s.text)) bad(`scaffold has no justification slot: "${s.text}"`);
   }

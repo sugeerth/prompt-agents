@@ -20,10 +20,13 @@ const ok = m => console.log('  ok:', m);
   await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   // This suite exercises answer-shaping (depth cycling, size caps, the paste
   // marker), which only exists in the Shaped steer level.
+  // the axes arrive with the prompt, so there has to be one before steering
+  await page.fill('#q', 'explain machine learning');
+  await page.waitForTimeout(60);
   await page.locator('#steer').fill('2');
   await page.locator('#steer').dispatchEvent('input');
 
-  const DRILL = "End with 3 numbered one-line ways to go deeper; I'll pick by number.";
+  const DRILL = "Then 3 numbered ways to go deeper.";
   const text = () => page.locator('#prompt').innerText();
 
   // 1. drill line present by default

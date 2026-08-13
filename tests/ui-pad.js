@@ -35,7 +35,14 @@ const ok = m => console.log('  ok:', m);
     await page.waitForTimeout(50);
   };
 
-  // 1. both axes exist as real, keyboard-reachable controls
+  // 1. the axes aren't on screen until there is a prompt for them to shape
+  if (await page.locator('.pad').isVisible())
+    fail('the shaping axes are offered before there is anything to shape');
+  else ok('the axes stay off screen until there is a prompt to shape');
+  await set('explain machine learning');
+  if (!(await page.locator('.pad').isVisible())) fail('the axes never arrived');
+  else ok('they arrive with the prompt');
+
   for (const id of ['steer', 'depth']) {
     const t = await page.locator('#' + id).getAttribute('type');
     if (t !== 'range') fail(`${id} is not a real slider (type=${t})`);
@@ -50,7 +57,6 @@ const ok = m => console.log('  ok:', m);
   else ok('depth runs up the page, steer runs across it');
 
   // 3. each axis names its current value
-  await set('explain machine learning');
   if ((await page.locator('#steerOut').innerText()) !== 'Guided') fail('steer does not name its value');
   else ok('the steer axis names where it is');
   await slide('steer', 2);
