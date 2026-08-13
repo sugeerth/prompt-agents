@@ -20,7 +20,8 @@ const ok = m => console.log('  ok:', m);
   await page.evaluate(() => { const t = document.getElementById('tune'); if (t) t.classList.add('open'); });
   // This suite exercises answer-shaping (depth cycling, size caps, the paste
   // marker), which only exists in the Shaped steer level.
-  while ((await page.locator('#steer').innerText()) !== 'Shaped') await page.click('#steer');
+  await page.locator('#steer').fill('2');
+  await page.locator('#steer').dispatchEvent('input');
 
   const DRILL = "End with 3 numbered one-line ways to go deeper; I'll pick by number.";
   const text = () => page.locator('#prompt').innerText();

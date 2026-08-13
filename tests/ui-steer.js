@@ -28,10 +28,16 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
   const text = () => page.locator('#prompt').innerText();
   const metrics = () => page.locator('#metrics').innerText();
   const set = async q => { await page.fill('#q', ''); await page.fill('#q', q); await page.keyboard.press('Escape'); await page.waitForTimeout(50); };
-  const steer = async mode => { while ((await page.locator('#steer').innerText()) !== mode) await page.click('#steer'); await page.waitForTimeout(40); };
+  // Steer is the horizontal axis of the pad: a real slider, so drive it as one
+  const MODES = ['Native', 'Guided', 'Shaped'];
+  const steer = async mode => {
+    await page.locator('#steer').fill(String(MODES.indexOf(mode)));
+    await page.locator('#steer').dispatchEvent('input');
+    await page.waitForTimeout(40);
+  };
 
   // 1. default posture is Guided — not the most forcing one
-  if ((await page.locator('#steer').innerText()) !== 'Guided') fail('default steer is not Guided');
+  if ((await page.locator('#steerOut').innerText()) !== 'Guided') fail('default steer is not Guided');
   else ok('defaults to Guided, not Shaped');
 
   // 2. Native never dictates form
@@ -63,13 +69,13 @@ const FORM = /\b(\d+ bullets?|bullet points?|max \d+ words?|under \d+ words?|in 
   else ok('Native still states what the user wants');
 
   // 6. Depth is hidden where it would do nothing
-  if (await page.locator('#depthWrap').isVisible()) fail('Depth shown in Native where it has no effect');
+  if (!(await page.locator('#depth').isDisabled())) fail('Depth live in Native where it has no effect');
   else ok('Depth hidden in Native');
   await steer('Guided');
-  if (await page.locator('#depthWrap').isVisible()) fail('Depth shown in Guided where it has no effect');
+  if (await page.locator('#depth').isDisabled()) fail('Depth locked in Guided, where it states how much you want');
   else ok('Depth hidden in Guided');
   await steer('Shaped');
-  if (!(await page.locator('#depthWrap').isVisible())) fail('Depth missing in Shaped');
+  if (await page.locator('#depth').isDisabled()) fail('Depth locked in Shaped where it applies');
   else ok('Depth shown in Shaped');
 
   // 7. Guided states intent but sets no size cap
