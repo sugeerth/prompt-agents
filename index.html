@@ -206,13 +206,43 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 
 footer{margin-top:46px; color:var(--muted); font-size:13px}
 footer a{color:var(--accent)}
-@media (max-width:640px){ .launch{margin-left:0} #q{font-size:17px} }
+
+/* Nothing is on screen until it has something to say. Before you type, this is
+   a box and a few examples — every control below the card is meaningless
+   without a topic, and a screenful of dead controls is exactly what makes a
+   tool feel like a cockpit instead of a place to start typing. The card itself
+   stays, because its one sentence is what tells a first-time visitor what is
+   about to happen. */
+main:not(.live) .actions,
+main:not(.live) .pad,
+main:not(.live) #chips,
+main:not(.live) #tunebtn,
+main:not(.live) #tune{display:none}
+
+@media (max-width:640px){
+  main{padding:26px 16px 60px}
+  header{gap:8px; flex-wrap:wrap}
+  h1{font-size:21px}
+  .tag{display:none}
+  .sub{font-size:14.5px; margin-bottom:20px}
+  .launch{margin-left:0}
+  /* the ghost sits on top of the input, so its type must track the input's
+     exactly — a fixed size here would smear the completion across the letters */
+  #q{font-size:17px; padding:16px 18px}
+  #ghost{font-size:17px; padding:16px 18px}
+  .kbd{display:none}
+  /* a thumb needs more than a 22px-wide target */
+  .vrange{width:30px; height:88px}
+  .pad{padding:14px 14px 12px; gap:12px}
+  .btn{padding:12px 18px}
+  .chip{padding:8px 14px}
+}
 </style>
 </head>
 <body>
 <main>
   <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
-  <p class="sub">Type what you need. A ready-to-paste prompt builds itself — tap any part of it to change it.</p>
+  <p class="sub">Type what you need. A ready-to-paste prompt builds itself.</p>
 
   <div id="chainstrip"></div>
 
@@ -283,13 +313,13 @@ footer a{color:var(--accent)}
 <div id="toast"></div>
 
 <!-- Bump ?v= on every release so browsers and the Pages CDN drop stale copies. -->
-<script src="data.js?v=19"></script>
-<script src="graph.js?v=19"></script>
-<script src="bridge.js?v=19"></script>
-<script src="reason.js?v=19"></script>
-<script src="intent.js?v=19"></script>
-<script src="chain.js?v=19"></script>
-<script src="profile.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="data.js?v=20"></script>
+<script src="graph.js?v=20"></script>
+<script src="bridge.js?v=20"></script>
+<script src="reason.js?v=20"></script>
+<script src="intent.js?v=20"></script>
+<script src="chain.js?v=20"></script>
+<script src="profile.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

@@ -46,6 +46,10 @@ const CORPUS = [
   ['install python on a mac', 'do'],
 
   // delegate — wants it done end to end, not instructions
+  /* A question is never a hand-off, however many delegate verbs it contains.
+     "is my landlord allowed to keep my deposit" once built a mission brief
+     with monitoring rules in place of a legal answer. */
+  ['how do i automate my weekly report', 'do'],
   ['set up ci for my repo', 'delegate'],
   ['automate my weekly report', 'delegate'],
   ['migrate my database to postgres', 'delegate'],
@@ -71,6 +75,8 @@ const CORPUS = [
 
   // check — wants judgement on their work
   ['review my resume', 'check'],
+  ['is this email too aggressive', 'check'],
+  ['is my resume good enough', 'check'],
   ['proofread this paragraph', 'check'],
   ['is this sql query correct', 'check'],
   ['what is wrong with my css', 'check'],

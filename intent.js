@@ -19,7 +19,7 @@
   const INTENTS = [
     {
       id: "fix", label: "fix it",
-      line: "I want this working — lead with the most likely cause.",
+      line: "Lead with what is actually wrong, and how to put it right.",
       cues: [
         [/^(fix|debug|troubleshoot|repair)\b/, 3],
         [/\b(not working|doesn'?t work|won'?t (start|load|open|run|connect|turn on)|stopped working)\b/, 3],
@@ -34,7 +34,7 @@
     },
     {
       id: "decide", label: "decide",
-      line: "I have to make a call here — tell me what you'd actually pick.",
+      line: "I need to make a call — tell me what you'd actually pick.",
       cues: [
         [/^(should i|should we|is it worth|which)\b/, 3],
         [/\b(vs\.?|versus)\b/, 2.5],
@@ -50,7 +50,7 @@
     },
     {
       id: "make", label: "make something",
-      line: "I want something I can use as-is, not advice about how to write it.",
+      line: "Give me something usable as-is, not advice on how to write it.",
       cues: [
         [/^(write|draft|compose|create|generate|design|make me|build me)\b/, 3],
         [/\b(email|letter|essay|post|caption|bio|speech|resume|cover letter|message|script|template)\b/, 2],
@@ -60,7 +60,7 @@
     },
     {
       id: "delegate", label: "hand it off",
-      line: "Do this end to end — I want the result, not instructions.",
+      line: "Do this end to end — the result, not instructions.",
       cues: [
         [/\bend to end\b/, 3],
         [/\bautomat(e|ing|ion)\b/, 3],
@@ -69,7 +69,9 @@
         // everyday hand-offs, not just developer ones
         [/^(book|order|renew|cancel|research|handle|coordinate|arrange|reach out|contact|follow up)\b/, 2.5],
         [/\bfor me\b/, 2.5],
-        [/\b(keep|watch|monitor) (my|the|our)\b/, 2.5],
+        // only as an imperative: "keep my prs green" is a hand-off, while
+        // "is my landlord allowed to keep my deposit" is a question about a deposit
+        [/^(keep|watch|monitor) (my|the|our)\b/, 2.5],
         // an imperative aimed at YOUR OWN infrastructure is a hand-off, not a how-to
         [/\b(my|our) (repos?|codebase|database|servers?|site|website|app|logs|prs?|dependencies|pipeline|backlog|inbox|downloads|files|folders|photos|calendar|newsletter|subscriptions?|invoices?|finances|clients|vendors|bookings?|insurance|taxes|registration)\b/, 1.5],
         // imperative housekeeping on your own stuff is also a hand-off
@@ -80,7 +82,7 @@
     },
     {
       id: "do", label: "do it myself",
-      line: "I want to be able to do this myself.",
+      line: "Show me how to do this myself.",
       cues: [
         [/^(how (do|can) i|how to)\b/, 3],
         [/\b(step by step|walk me through|guide me)\b/, 2.5],
@@ -90,7 +92,7 @@
     },
     {
       id: "understand", label: "understand",
-      line: "I want to genuinely understand this, not just collect facts.",
+      line: "Help me actually understand this, not just collect facts.",
       cues: [
         [/^(explain|how does|eli5)\b/, 3],
         // "what is X" is curiosity; "what is wrong with X" is a complaint
@@ -121,11 +123,16 @@
         [/\bdoes (this|my) (look|seem|make sense)\b/, 3],
         [/\b(review|feedback on|critique|proofread)\b/, 2],
         [/\b(am i (doing|missing)|what('?s| is) wrong with)\b/, 3],
+        /* "is this email too aggressive" asks for judgement on something that
+           exists. Restricted to things a person makes, because "is my landlord
+           allowed to keep my deposit" is a question about the world, not a
+           request to review the landlord. */
+        [/^is (this|my) (email|resume|cv|cover letter|code|essay|draft|copy|answer|plan|design|logo|post|pitch|writing|website|landing page)\b/, 3],
       ],
     },
     {
       id: "plan", label: "plan it",
-      line: "I want a plan I can actually follow, and to know what I'm forgetting.",
+      line: "Give me a plan I can follow, and say what I am forgetting.",
       cues: [
         [/^(plan|organi[sz]e|schedule|itinerary)\b/, 3],
         [/\b(itinerary|plan for|checklist|prepare for|roadmap)\b/, 2],
@@ -149,16 +156,28 @@
 
   /* When we can't tell what someone wants, guessing is worse than asking.
      One question costs a round trip; a confidently wrong frame costs the answer. */
-  const CLARIFY = "If my goal here is ambiguous, ask me one question before answering.";
+  const CLARIFY = "Ask me one question first if my goal isn't clear.";
+
+  /* Someone asking a question wants an answer, not a contractor. No matter how
+     many hand-off verbs a sentence contains, "is my landlord allowed to keep my
+     deposit" is not an instruction to go and keep something — and mistaking it
+     for one produces a mission brief with monitoring rules in place of an
+     answer, which is the worst output this app can produce. */
+  const QUESTION_FORM = /^(is|are|was|were|can|could|do|does|did|should|would|will|am|have|has|what|why|how|when|where|which|who)\b/;
 
   function recognize(text) {
     const t = " " + text.toLowerCase().trim().replace(/\s+/g, " ") + " ";
     if (!text.trim()) return { ...OPEN, confidence: 0, scores: {} };
 
+    const asked = QUESTION_FORM.test(text.trim().toLowerCase()) || /\?\s*$/.test(text.trim());
+
     const scores = {};
     for (const intent of INTENTS) {
       let s = 0;
       for (const [re, w] of intent.cues) if (re.test(t.trim())) s += w;
+      /* "how do i automate this" is a request for instructions, not a
+         hand-off; the question form outranks every delegate cue in it. */
+      if (s && intent.id === "delegate" && asked) s = 0;
       if (s) scores[intent.id] = +s.toFixed(2);
     }
 

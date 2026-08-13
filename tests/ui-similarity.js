@@ -77,7 +77,7 @@ const ok = m => console.log('  ok:', m);
   t = await text();
   if (!t.includes(gold0.p)) fail('gold prompt not served verbatim.\n  want: ' + gold0.p + '\n  got:  ' + t);
   else ok('gold prompt served verbatim');
-  if (!t.includes("I'll pick by number") && gold0.d !== 'image') fail('drill line missing on gold prompt');
+  if (!t.includes('ways to go deeper') && gold0.d !== 'image') fail('drill line missing on gold prompt');
   else ok('drill line still appended to gold');
   await page.locator('#chips .chip[data-id="table"]').click();
   t = await text();

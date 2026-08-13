@@ -31,11 +31,10 @@ const ok = m => console.log('  ok:', m);
     await page.keyboard.press('Escape'); await page.waitForTimeout(60);
   };
 
-  // 1. the chain control is there from the start, and does nothing on an empty box
-  await page.click('#chainadd');
-  if (await page.locator('#chainstrip').isVisible())
-    fail('an empty prompt was committed as a chain step');
-  else ok('nothing to chain yet — the control stays quiet on an empty box');
+  // 1. there is nothing to chain yet, so the control isn't on screen at all
+  if (await page.locator('#chainadd').isVisible())
+    fail('the chain control is offered before there is a prompt to chain');
+  else ok('nothing to chain yet — the control is not on screen');
 
   // 2. one tap commits the current prompt and clears the box for the next thought
   await set('10 days in japan with kids on a tight budget');

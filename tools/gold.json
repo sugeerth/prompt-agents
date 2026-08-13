@@ -1,0 +1,577 @@
+[
+{
+"q": "write an email",
+"d": "email",
+"p": "Draft the email in under 120 words: clear subject line, one-sentence opener stating the ask, 2-3 supporting sentences, specific closing action. Plain professional tone, no filler phrases. Context: <what the email needs to say and to whom>"
+},
+{
+"q": "resignation letter",
+"d": "email",
+"p": "Write a resignation letter under 150 words: last-day date up top, one sentence of neutral gratitude, an offer to help transition, zero reasons or grievances. Formal but warm. Details: <role, company, last working day>"
+},
+{
+"q": "cover letter",
+"d": "career",
+"p": "Write a 3-paragraph cover letter under 250 words: hook tying my strongest fact to their top requirement, one paragraph of evidence, brief close. Use only facts I provide — invent nothing. <paste job description> <paste resume or key facts>"
+},
+{
+"q": "improve my resume",
+"d": "career",
+"p": "Rewrite my resume bullets: for each, return a before/after table with a one-line reason. Strong verb first, outcome over duty, use only stated facts — never invent metrics. Flag 3 gaps I should quantify myself. <paste resume>"
+},
+{
+"q": "interview prep",
+"d": "career",
+"p": "List the 10 most likely questions for this role, each with a 2-sentence model-answer skeleton (situation then result) I can fill with my own stories, plus the one question I should ask back. <paste job title and company>"
+},
+{
+"q": "ask for a raise",
+"d": "career",
+"p": "Script the raise conversation: 3 numbered talking points anchored to results I name, one target number with a defensible range, the exact opening sentence, and a 2-line fallback if they say no. Under 200 words total."
+},
+{
+"q": "write my essay",
+"d": "write",
+"p": "Build the essay scaffold first: thesis in one sentence, 3 body-paragraph topic sentences with the evidence each needs, then a full draft — no padded intro, no 'in conclusion'. Topic and length: <topic and required word count>"
+},
+{
+"q": "rewrite this professionally",
+"d": "write",
+"p": "Return two rewrites: one polished-formal, one plain-and-direct, each preserving my meaning and roughly my length. Below them, 3 bullets naming what you changed and why. <paste text>"
+},
+{
+"q": "fix my grammar",
+"d": "write",
+"p": "Return the corrected text first, changes bolded. Then a table of each fix: original, correction, 5-word rule. Preserve my voice and phrasing — grammar and clarity fixes only, no rewrites. <paste text>"
+},
+{
+"q": "summarize this",
+"d": "summarize",
+"p": "Summarize in exactly 5 bullets: main claim first, then key evidence, then the one number or fact most readers would miss. One sentence per bullet, no bullet restating the title. Add a one-line 'so what'. <paste text>"
+},
+{
+"q": "explain quantum computing",
+"d": "learn",
+"p": "Explain quantum computing in 3 layers, 2 sentences each: an everyday analogy, how qubits and superposition actually differ from bits, and what it will and won't be good at. End with the most common misconception, corrected."
+},
+{
+"q": "explain like i'm five",
+"d": "learn",
+"p": "Explain <topic> in 4 short sentences a curious 10-year-old would follow, using one concrete household analogy. Then one sentence on where the analogy breaks. No jargon word without instantly defining it."
+},
+{
+"q": "7 day japan itinerary",
+"d": "travel",
+"p": "Day-by-day table, 7 rows: city, morning/afternoon/evening one-liners, transit between stops, realistic daily budget in USD. Flag the 3 things to book weeks ahead (trains, teamLab, Ghibli) and the one classic first-timer mistake to skip. Assume a Tokyo-Kyoto core."
+},
+{
+"q": "3 day paris itinerary",
+"d": "travel",
+"p": "Three-day plan, one line per half-day: sight, nearest metro stop, ideal time slot to dodge queues, and a specific lunch spot nearby. Include per-day budget, the 2 tickets to book ahead (Louvre, Eiffel), and one non-touristy evening."
+},
+{
+"q": "weekend getaway ideas",
+"d": "travel",
+"p": "Table of 7 getaways within driving distance of <my city>: drive time, best-for (couples, family, solo), signature thing to do, weekend cost for two, and the season it peaks. Rank by value and note which needs booking now."
+},
+{
+"q": "packing list",
+"d": "travel",
+"p": "Checklist grouped in 5 categories, 25 items max, for <destination, trip length, season>: mark each carry-on or checked, star the 5 items people most often forget, and list 3 things to leave home. Assume one bag."
+},
+{
+"q": "best time to book flights",
+"d": "travel",
+"p": "Answer in a 3-row table by route type (domestic, international, holiday peak): how many weeks out to book, cheapest departure days, and one fare-alert tactic. Then 3 myths that no longer work (Tuesday trick, incognito), with typical savings ranges."
+},
+{
+"q": "weekly meal plan",
+"d": "cook",
+"p": "7-day dinner table: dish, 20-word method, prep time, cost per serving. Reuse ingredients across days to cut waste, max 40 minutes any night. Finish with one consolidated grocery list sorted by aisle, plus swaps for picky eaters."
+},
+{
+"q": "dinner ideas tonight",
+"d": "cook",
+"p": "5 dinners I can start right now, one line each: dish, total time under 30 minutes, the 5 or fewer main ingredients. Order from fastest to most impressive, and mark which need zero shopping from a normal pantry."
+},
+{
+"q": "recipes with what i have",
+"d": "cook",
+"p": "From my ingredients, give 3 real dishes ranked by fewest extra items needed: name, numbered steps (max 6), cook time, and the one pantry staple that would upgrade it. No recipe requiring a shopping trip. <list your ingredients>"
+},
+{
+"q": "weight loss plan",
+"d": "health",
+"p": "Build a 4-week plan as a weekly table: daily calorie target from my stats, protein floor in grams, 3 meal templates, step goal, one weigh-in rule. Sustainable 0.5-1% bodyweight per week — no crash tactics. Stats: <age, sex, height, weight, activity>"
+},
+{
+"q": "how to sleep better",
+"d": "health",
+"p": "Give a 7-item nightly protocol in time order (3 hours pre-bed to lights-out), one sentence each with the mechanism. Then the 3 highest-impact habits ranked by evidence strength, and the one popular tip that backfires."
+},
+{
+"q": "beginner workout plan",
+"d": "fit",
+"p": "3-day-per-week full-body table: 6 exercises per day with sets x reps, rest, and a 10-word form cue each. Bodyweight and dumbbells only, 45 minutes per session, with a 4-week progression rule and the two signs to deload."
+},
+{
+"q": "lose belly fat",
+"d": "fit",
+"p": "Start with the truth in 2 sentences: no spot reduction — calorie deficit plus training. Then a 5-point weekly plan (deficit size, protein target, 2 strength days, daily steps, sleep floor), each with a measurable 4-week checkpoint."
+},
+{
+"q": "business ideas",
+"d": "biz",
+"p": "Table of 7 ideas matched to <my skills and budget>: startup cost, effort level, concrete first step this week, why-now trend, realistic monthly revenue at month 12. No dropshipping clichés; rank by odds of a first paying customer within 60 days."
+},
+{
+"q": "write a business plan",
+"d": "biz",
+"p": "Produce a one-page plan in 9 headed sections, max 3 sentences each: problem, customer, offer, pricing, channel, competition, unit economics, 90-day milestones, top risk with mitigation. Real numbers over adjectives — flag every assumption to validate. Business: <describe your business>"
+},
+{
+"q": "side hustle ideas",
+"d": "biz",
+"p": "Table of 8 side hustles: hours per week, startup cost under $500, realistic monthly income by month 3, a first step doable tonight, and why demand is rising now. Match to <skills and free hours>; cut anything needing an audience I don't have."
+},
+{
+"q": "business name ideas",
+"d": "biz",
+"p": "Generate 15 names in 3 styles (descriptive, invented, evocative), 5 each with a one-line rationale. For the top 3: a check-the-.com note, trademark red flags to search, and how it sounds said aloud. Business: <what it does and the vibe>"
+},
+{
+"q": "validate my business idea",
+"d": "biz",
+"p": "Stress-test it: 5-row table of riskiest assumptions ranked by kill-probability, each with a sub-$100 test runnable this week and a pass/fail metric. Then the strongest competitor and my honest wedge. Verdict in one sentence. Idea: <describe it>"
+},
+{
+"q": "instagram caption ideas",
+"d": "market",
+"p": "Write 6 captions: 2 punchy one-liners, 2 story-style under 40 words, 2 question-hooks. Each with 5 niche hashtags, no generic #love. The first line must work before the 'more' fold. Post: <describe the post and brand voice>"
+},
+{
+"q": "marketing plan",
+"d": "market",
+"p": "One-page plan: target customer in one sentence, one core message, then a 5-row channel table — tactic, weekly hours, cost, KPI, expected 90-day result. Pick 2 channels max to start and name what I'm deliberately ignoring. Business: <product and budget>"
+},
+{
+"q": "write a python script",
+"d": "code",
+"p": "Deliver one runnable script: stdlib-first, type hints, a docstring stating usage, graceful errors on bad input, and a __main__ example. After the code, 3 bullets: assumptions made, edge cases handled, how to test. Task: <describe what it should do>"
+},
+{
+"q": "explain this code",
+"d": "code",
+"p": "Explain top-down in 3 passes: one-sentence purpose, numbered walkthrough of the flow (max 8 steps), then gotchas — hidden state, edge cases, complexity. Flag any line doing something non-obvious with a one-line why. <paste code>"
+},
+{
+"q": "fix this error",
+"d": "debug",
+"p": "Diagnose before prescribing: root cause in 2 sentences, then the minimal fix as a diff, then how to verify in one command. If the cause is ambiguous, give the 2 likeliest with a distinguishing test for each. <paste error and code>"
+},
+{
+"q": "excel formula help",
+"d": "tech",
+"p": "Give the working formula first with cell references matching my layout, then a numbered plain-English breakdown clause by clause, one common #REF or #N/A pitfall, and the modern alternative (XLOOKUP, FILTER) if mine is legacy. Task: <what the formula should do>"
+},
+{
+"q": "monthly budget",
+"d": "money",
+"p": "Build a budget table from my numbers: fixed, variable, and savings rows with dollar amounts and percent of take-home, benchmarked against 50/30/20. Name the 2 biggest leaks with a specific monthly recovery figure each. Numbers: <income and main expenses>"
+},
+{
+"q": "investing for beginners",
+"d": "money",
+"p": "Explain in 5 numbered steps in action order: emergency fund, employer match, tax-advantaged accounts, low-cost index fund, automation. Two sentences each naming the specific account or fund type. End with 3 costly beginner mistakes. Be concrete, skip boilerplate disclaimers."
+},
+{
+"q": "best laptop 2026",
+"d": "shop",
+"p": "Table of 5 picks by persona (student, creator, coder, gamer, budget): model, price, standout spec, dealbreaker, who should skip it. Declare a best-overall with a two-sentence reason, and name one spec that is overpriced marketing."
+},
+{
+"q": "gift ideas",
+"d": "shop",
+"p": "10 gift ideas in a table for <person, occasion, budget>: item, price, why it fits them specifically, where to buy. Range from safe to memorable; mark the 2 needing order lead time. No gift cards unless nothing else fits."
+},
+{
+"q": "iphone vs android",
+"d": "decide",
+"p": "Verdict first: one sentence naming who each suits. Then a 6-row table — camera, ecosystem lock-in, update longevity, customization, price at each tier, switching cost. End with the single question that actually decides it for most people."
+},
+{
+"q": "pros and cons",
+"d": "decide",
+"p": "Table for <your decision>: max 5 pros and 5 cons, each weighted 1-5 for how much it matters, not just listed. Sum the weights, state the lean, then name the one factor that would flip the answer."
+},
+{
+"q": "restaurants near me",
+"d": "local",
+"p": "List 5 spots in a table for <your neighborhood or intersection>: cuisine, price tier, signature dish, walk or drive time, why locals rate it. Skip chains, note which need reservations tonight, and add one wildcard pick."
+},
+{
+"q": "things to do near me",
+"d": "local",
+"p": "8 options within 30 minutes of <your location> in a table: activity, cost, time needed, indoor or outdoor, best hour to go. Include at least 2 free ones and 1 most people don't know. Order by effort, lowest first."
+},
+{
+"q": "coffee shops near me",
+"d": "local",
+"p": "5 cafés near <your location>, one line each: vibe (laptop-friendly, outlets, noise), signature drink, walk time, weekday vs weekend crowding. Crown a best-for-working and a best-for-conversation winner. No chains."
+},
+{
+"q": "date ideas near me",
+"d": "local",
+"p": "7 date ideas around <your city> in a table: activity, cost per couple, duration, weather backup, why it sparks conversation. Range from free to splurge, mark the 2 that need booking, and flag first-date-safe versus established-couple picks."
+},
+{
+"q": "gyms near me",
+"d": "local",
+"p": "Compare 5 gyms near <your location> in a table: monthly price, contract trap or none, peak-hour crowding, standout facility, best-for (lifting, classes, budget). End with the 2 questions to ask on a trial visit before signing anything."
+},
+{
+"q": "learn spanish",
+"d": "lang",
+"p": "Give a 30-day starter plan at 20 minutes daily, as a 4-week table: weekly focus, daily drill, one free resource each. Include the 50-word survival core to memorize first and the habit that beats every app: daily spoken output."
+},
+{
+"q": "translate this",
+"d": "lang",
+"p": "Translate into <target language>, natural register over word-for-word. Return the translation, a back-translation so I can check meaning, and footnotes on any phrase where a literal rendering would mislead (max 3). <paste text>"
+},
+{
+"q": "solve this math problem",
+"d": "math",
+"p": "Show the solution as numbered steps, one operation per step with the rule named (distribute, factor, substitute). Box the final answer, then verify by plugging it back in. Show the fastest method and name one alternative. <paste problem>"
+},
+{
+"q": "what to text back",
+"d": "social",
+"p": "Give 3 reply options — warm, neutral, boundary-setting — each under 25 words and sounding like a person, not a therapist. One line under each on the response it likely invites. Context: <paste the conversation and what you want>"
+},
+{
+"q": "apology message",
+"d": "social",
+"p": "Write a 4-sentence apology: name the specific harm, take ownership with zero 'if' or 'but', state the concrete change, ask for nothing in return. Then a shorter text-message version. What happened: <what you did and to whom>"
+},
+{
+"q": "write a poem",
+"d": "create",
+"p": "Write the poem in 12-16 lines with one governing image sustained throughout, concrete nouns over abstractions, no forced rhyme unless requested. Then 2 sentences naming the central choice made and the one line you'd cut. Subject: <topic, occasion, tone>"
+},
+{
+"q": "toddler tantrums",
+"d": "parent",
+"p": "Give a 4-step in-the-moment script (exact words, kneel to their level, name the feeling, hold the limit) plus a 3-row prevention table: common trigger, early sign, pre-empt move. Two sentences on what makes tantrums worse: logic and lectures."
+},
+{
+"q": "cleaning schedule",
+"d": "home",
+"p": "Build a table: daily 10-minute reset of 5 tasks, weekly Mon-Sun rotation of one 20-minute zone per day, monthly deep-clean list of 6. Mark tasks kids can own, and name the one daily habit that halves everything: clear counters nightly."
+},
+{
+"q": "tell me a joke",
+"d": "fun",
+"p": "Tell 3 jokes in rising order of groan: one clean one-liner, one pun, one setup-punchline under 40 words. No explaining the joke, no chicken-crossing retreads. If one lands flat, it's the pun — it always is."
+},
+{
+"q": "study schedule",
+"d": "plan",
+"p": "Build a weekly table from now to <exam date and subjects>: day, subject, one 45-minute active-recall block, 10-minute review of prior material. Weight topics by weakness not comfort, keep one full rest day, and end each week with a self-test slot."
+},
+{
+"q": "review my lease",
+"d": "legal",
+"p": "Scan clause-by-clause and return a table of red flags only: clause, plain-English meaning, risk level, exact question to ask the landlord. Check break fees, auto-renewal, deposit deductions, repair duties, guest limits. Flag anything that needs a real lawyer. <paste lease>"
+},
+{
+"q": "analyze this data",
+"d": "analyze",
+"p": "Report findings in order of surprise, not column order: 5 bullets max, each with the number that proves it. Then one table of key stats, one caveat about data quality, and the single follow-up metric worth collecting. <paste data>"
+},
+{
+"q": "generate a logo",
+"d": "image",
+"p": "First, 3 concept directions in a table: symbol idea, style, palette with hex codes, why it fits the brand. Then one detailed image-generation prompt for the strongest concept — flat vector, scalable, legible at 32px. Brand: <name, industry, vibe>"
+},
+{
+"q": "research this topic",
+"d": "agent",
+"p": "Run deep research on <topic and the decision it informs>: executive summary in 5 bullets, a source table (claim, source, date, confidence), points where credible sources disagree, and what remains unknown. Prioritize primary sources over aggregators; max 10 sources."
+},
+{
+"q": "set up ci for my repo",
+"d": "agent",
+"p": "Set up CI for <my repo> end to end: plan first, detect the stack, add a workflow running tests and lint on every push, verify it passes, and report what you added. Ask before changing anything outside CI config."
+},
+{
+"q": "upgrade all my dependencies safely",
+"d": "agent",
+"p": "Upgrade all my dependencies safely: plan the order, bump one group at a time, run the test suite after each change, and roll forward only when green. Ask before any major-version or lockfile-wide change, and finish with a report of what was upgraded, skipped, and why."
+},
+{
+"q": "migrate my database schema",
+"d": "agent",
+"p": "Migrate the database schema to <target change>: draft a migration plan, write reversible migrations, apply them to a staging copy first, verify data integrity after each step, and report the outcome. Never drop or overwrite data without asking me first."
+},
+{
+"q": "keep my prs green",
+"d": "agent",
+"p": "Keep my open PRs green: check each one, plan fixes for failing checks and merge conflicts, apply them branch by branch, rerun CI to confirm, and report the status of every PR. Ask before force-pushing, closing, or merging anything."
+},
+{
+"q": "refactor my codebase",
+"d": "agent",
+"p": "Refactor <the module> without changing behavior: map the current structure, propose a plan, make small verifiable changes with tests passing after each one, and finish with a report of what moved and why. Ask before deleting files or touching public APIs."
+},
+{
+"q": "build and deploy my website",
+"d": "agent",
+"p": "Build and deploy my website end to end: plan the pipeline, build the site, run checks, deploy to <hosting target>, verify the live URL responds correctly, and report each step's result. Ask before overwriting an existing deployment or changing DNS."
+},
+{
+"q": "what to say to someone grieving",
+"d": "social",
+"p": "Give 5 messages I can actually send, 25 words max each: one for right after the death, one for weeks later, one offering a specific practical thing, one for a colleague, one if I barely knew them. Then 3 phrases to never use, one line why each."
+},
+{
+"q": "write a eulogy",
+"d": "write",
+"p": "Ask me for 3 specific memories first if I haven't given any. Then write 600-800 words to be read aloud in 4-5 minutes: open on one concrete scene, not a life summary; three short movements; close on something they would have said. Plain words, no angel clichés."
+},
+{
+"q": "dispute a medical bill",
+"d": "legal",
+"p": "Steps in order: request an itemized bill, check codes against what actually happened, compare to the insurer's explanation of benefits, then dispute in writing. Give a 150-word dispute letter with blanks to fill. Name the deadline that usually applies, and say plainly when this needs a patient advocate or lawyer."
+},
+{
+"q": "renew my passport",
+"d": "plan",
+"p": "Ask which country's passport first. Then a checklist in order: documents, the photo rules people fail, fee, where to send it, current processing time, and what to do if I travel sooner than that. Flag the single step that causes most rejections. Max 12 lines."
+},
+{
+"q": "what to do when someone dies",
+"d": "plan",
+"p": "A checklist in three blocks — first 48 hours, first two weeks, first three months — one line each, most urgent first: registering the death, the funeral, notifying banks and government, probate. Mark which need original documents and which can wait. Say plainly where a solicitor is worth paying for."
+},
+{
+"q": "improve my credit score",
+"d": "money",
+"p": "Rank the levers by points per unit of effort in a 5-row table: what to do, why it moves the score, how long before it shows. Name the 2 popular tips that do nothing. Never recommend a credit-repair service. Under 200 words, no disclaimers padding it out."
+},
+{
+"q": "pay off debt fast",
+"d": "money",
+"p": "Ask for my balances, interest rates and minimums if I haven't listed them. Then compare avalanche and snowball on my real numbers in one table — total interest and payoff date each — and pick one with a reason. If the minimums exceed what I can pay, say so and point to free debt advice."
+},
+{
+"q": "first time manager",
+"d": "career",
+"p": "The 5 things that matter in the first 90 days, ranked, each with the exact first action: one-to-ones, expectations, feedback, delegation, shielding the team. Then one line on the classic failure — staying the best individual contributor instead of managing. Max 200 words, no leadership platitudes."
+},
+{
+"q": "deal with a difficult coworker",
+"d": "career",
+"p": "Ask what they specifically do, once. Then name the pattern, give one script for the direct conversation under 60 words, what to do if it repeats, and the point where this becomes a manager or HR matter. Say honestly if the realistic answer is to leave rather than fix it."
+},
+{
+"q": "performance review",
+"d": "career",
+"p": "Write my self-review from what I give you: 5 accomplishments as result-first bullets with numbers, 2 development areas stated without self-flagellation, 3 goals for next cycle. Use only facts I provide — invent no metrics. Then one line on what to raise verbally instead of in writing. <paste your notes>"
+},
+{
+"q": "help my kid with homework",
+"d": "parent",
+"p": "Ask their age and the subject first. Then 4 things to do when they are stuck, in order, one line each — and the thing not to do, which is give the answer. Add a 3-line script for when it turns into tears. Realistic for a tired weeknight."
+},
+{
+"q": "screen time rules",
+"d": "parent",
+"p": "Age-banded guidance in a small table (toddler, primary, teen): rough daily cap, what matters more than the number, one rule worth actually enforcing. Then a 4-line family agreement I can put on the fridge, and how to handle the fight when the rule lands. No shaming."
+},
+{
+"q": "caring for an elderly parent",
+"d": "plan",
+"p": "Ask what they can still do alone first. Then a checklist across 4 fronts — daily care, money and legal paperwork, medical coordination, and my own limits — one line each, most urgent first. Name the services families find too late, and say plainly when paid care is the right answer."
+},
+{
+"q": "find a therapist",
+"d": "health",
+"p": "Six steps: which type of therapy suits which problem, where to look including low-cost and waiting-list routes, what to ask on a first call, 3 signs of a bad fit, how many sessions before judging, how to leave. Say clearly when a doctor or crisis line is the right call instead."
+},
+{
+"q": "panic attack",
+"d": "health",
+"p": "In-the-moment steps first: 5 plain imperatives — breathing pattern with counts, grounding, what not to do. Then 3 things that reduce frequency over weeks. State plainly that chest pain, or a first-ever episode, needs medical assessment rather than self-management."
+},
+{
+"q": "back pain",
+"d": "health",
+"p": "Ask where it hurts and how long it has lasted first. Then the likely everyday causes, 4 movements to try with reps, 2 things to stop doing, and a realistic timeline. List the red flags — numbness, bladder changes, pain after a fall — that mean see a doctor now."
+},
+{
+"q": "workout with bad knees",
+"d": "fit",
+"p": "Ask which movement actually hurts first. Then a 3-day weekly plan: 6 knee-friendly exercises with sets, reps and a 10-word form cue each, plus 3 to avoid and why. Add a 6-week progression rule. Say clearly that sharp pain or swelling means a physio, not a workaround."
+},
+{
+"q": "grocery list for the week",
+"d": "cook",
+"p": "Ask how many people and how many nights first. Then one list sorted by supermarket aisle with quantities, built so nothing is bought for a single meal. Note the 2 items worth spending more on. End with 5 lines saying which day cooks what."
+},
+{
+"q": "fix my wifi",
+"d": "tech",
+"p": "Fixes in the order that solves the most cases first, numbered, one line each — router placement, band, channel, firmware, ISP fault — and after each, how to tell whether it worked. End with the point where the answer is a mesh system or a call to the provider, not another setting."
+},
+{
+"q": "laptop running slow",
+"d": "tech",
+"p": "Ask the operating system and rough age first. Then 8 fixes ordered by impact per minute of effort: startup items, free storage, browser tabs and extensions, updates, heat and dust, memory. One line each with how to check it. End with the point where new hardware beats more tinkering."
+},
+{
+"q": "back up my photos",
+"d": "tech",
+"p": "One sentence on the 3-2-1 rule, then a table of 4 realistic options — phone cloud, external drive, backup service, home NAS — with yearly cost, effort, and what each fails to protect against. Pick one for most people. Finish with the setup steps in 6 lines."
+},
+{
+"q": "unclog a drain",
+"d": "home",
+"p": "Steps in order from least to most invasive: boiling water, plunger, drain snake, trap removal. Tools listed up front, one line per step with what success looks like. Say what must never be mixed, and when standing water in several drains at once means calling a plumber instead."
+},
+{
+"q": "paint colours for a room",
+"d": "home",
+"p": "Ask which room and which way its windows face first. Then 5 options in a table: colour, why it suits that light, what it does to the room's apparent size, one trim pairing. Add the sampling rule — paint a large board, look at it morning and night before buying."
+},
+{
+"q": "grow tomatoes",
+"d": "home",
+"p": "Ask my rough climate or region first. Then the season in 6 stages — sow, pot on, plant out, feed, prune, harvest — one line each with timing. Name the 3 failures that kill most crops (blossom end rot, uneven watering, no feed) and the fix for each."
+},
+{
+"q": "dog barking",
+"d": "home",
+"p": "Ask what triggers it — doorbell, being left alone, other dogs — before answering. Then the training plan for that trigger: 5 steps, one line each, with how many days each takes. Name the two things that make it worse, shouting and inconsistency. Say when it needs a behaviourist."
+},
+{
+"q": "car making a noise",
+"d": "home",
+"p": "Ask when the noise happens — braking, turning, accelerating, idling — first. Then a table: noise, likely cause, rough repair cost, urgency. Mark the ones that mean stop driving now. End with the exact words to say at the garage so I am not sold work I don't need."
+},
+{
+"q": "should i rent or buy",
+"d": "decide",
+"p": "Ask how long I plan to stay, once. Then compare on my numbers in one table: total cost of owning (deposit, interest, maintenance, fees) against renting and investing the difference. State the break-even year and your pick in two sentences, then the one assumption that flips the answer."
+},
+{
+"q": "solar panels worth it",
+"d": "decide",
+"p": "Ask my rough annual electricity cost and country. Then a payback table: system cost, expected generation, yearly saving, break-even year, and how that changes if I export rather than use the power. Verdict in one sentence, plus the quote detail installers gloss over."
+},
+{
+"q": "should i get a dog",
+"d": "decide",
+"p": "Don't answer yet — ask my hours out of the house, garden or none, and budget. Then a table of true weekly time, annual cost including vet and insurance, and the 3 lifestyle things that genuinely change. Give a verdict, and name two breeds or a shelter route that fit."
+},
+{
+"q": "buy a used car",
+"d": "shop",
+"p": "A 12-point inspection checklist in viewing order, one line each: documents, mileage against service history, tyres, rust, cold start, test drive. Then 5 questions for the seller and the answers that mean walk away. End with what to check online before travelling to see it."
+},
+{
+"q": "trip to italy",
+"d": "travel",
+"p": "Ask trip length and whether this is a first visit. Then a day-by-day outline, one line per day, with train legs between cities, one must-book ticket per city, and a realistic daily budget in euros. Name the classic mistake: too many cities in too few days."
+},
+{
+"q": "road trip planning",
+"d": "travel",
+"p": "Build the route as a table: leg, driving hours, overnight stop, one thing worth stopping for. Cap driving at 4 hours a day unless I say otherwise. Add fuel and lodging estimates, the 2 bookings to make now, and the stretch with no services. Route: <start, end, days>"
+},
+{
+"q": "things to do this weekend",
+"d": "local",
+"p": "Ask my city and whether I want indoors or out. Then 8 options in a table: what, cost, time needed, best hour to go, booking needed or not. At least 2 free, at least 1 most locals miss. Order by effort, lowest first."
+},
+{
+"q": "learn french",
+"d": "lang",
+"p": "A 30-day plan at 20 minutes daily, as a 4-week table: weekly focus, daily drill, one free resource each. Include the 50 highest-frequency words to learn first, the pronunciation rule that unlocks the most words, and the habit that beats any app — speaking aloud from day one."
+},
+{
+"q": "summarize a contract",
+"d": "summarize",
+"p": "Table the clauses that create obligations or costs: clause, plain-English meaning, what it means for me, risk high/medium/low. Then 5 questions to ask before signing and anything unusual for this type of agreement. Say plainly this is not legal advice and where a lawyer is needed. <paste contract>"
+},
+{
+"q": "write a linkedin post",
+"d": "write",
+"p": "Under 150 words: first line a concrete hook that works before the 'see more' fold, short paragraphs, one specific story or number, an ending that invites replies without begging for them. No emoji ladders, no 'thoughts?'. Topic: <what happened and what you learned>"
+},
+{
+"q": "write a complaint letter",
+"d": "write",
+"p": "Under 250 words: what was bought or promised, what went wrong with dates, what I already tried, the specific remedy I want, and a deadline. Firm and factual — no anger, no threats beyond naming the next step. Details: <what happened, dates, amounts>"
+},
+{
+"q": "price my services",
+"d": "biz",
+"p": "Ask what I do and roughly how long one job takes. Then 3 pricing models in a table — hourly, per project, retainer — each with a real number derived from my costs and target income, and what it signals to clients. Name the underpricing trap and give the exact line for raising rates."
+},
+{
+"q": "chase an unpaid invoice",
+"d": "biz",
+"p": "Three escalating emails, each under 90 words: friendly nudge at 7 days, firm reminder at 14 quoting the payment terms, final notice at 30 naming the next step. Then the practical options after that — late fees, small claims, collections — with rough cost and time for each."
+},
+{
+"q": "register a business",
+"d": "biz",
+"p": "Ask which country and whether I'll have employees. Then the steps in order: structure, registration, tax registration, bank account, insurance, record-keeping — one line each with rough cost and timing. Flag the step people do late and regret, separating business and personal money. Say when an accountant pays for itself."
+},
+{
+"q": "cold email that gets replies",
+"d": "market",
+"p": "Three versions under 90 words each: problem-first, referral-style, and one built on a specific observation about them. Subject lines under 6 words. One clear ask, no calendar link in a first email. Then the follow-up to send after 5 days. Recipient: <who they are and why you're writing>"
+},
+{
+"q": "social media content ideas",
+"d": "market",
+"p": "15 post ideas in a table: hook line, format (photo, carousel, short video), the job it does (reach, trust, sell), effort S/M/L. At least 4 that don't need my face on camera. Mark the 3 to post first and say why those. Business: <what you sell and to whom>"
+},
+{
+"q": "explain inflation",
+"d": "learn",
+"p": "Three layers, 2 sentences each: what it actually measures, why prices rise (demand, costs, money supply), and what it does to wages, savings and debt. End with the most common misconception — that falling inflation means falling prices — corrected in one sentence."
+},
+{
+"q": "understand my payslip",
+"d": "learn",
+"p": "Ask which country's payslip first. Then explain each line in a table: what it is, why it's there, how it's calculated — gross versus net, tax, pension, and the deductions people miss. Finish with the 3 things to check every month and the most common payroll error."
+},
+{
+"q": "calculate compound interest",
+"d": "math",
+"p": "Give the formula, then the answer for my numbers, then a table of the balance at years 5, 10, 20 and 30. Show separately what one extra percent of return and one extra year of contributions each do to the final figure. Inputs: <starting amount, monthly addition, rate, years>"
+},
+{
+"q": "give me feedback on this",
+"d": "analyze",
+"p": "Three passes: what works and why (3 bullets), what is weakest ranked by impact (3 bullets, each stating the fix rather than just the flaw), and the one change that would matter more than the rest combined. Be direct — no compliment sandwich. <paste your work>"
+},
+{
+"q": "clean up my inbox",
+"d": "agent",
+"p": "Take my inbox from thousands of unread to zero: draft the filing rules and show them to me first, archive anything older than six months untouched, sort the rest into act, read and reference, and unsubscribe from what I never open. Delete nothing without asking. Report counts moved per rule."
+},
+{
+"q": "write tests for my code",
+"d": "agent",
+"p": "Add tests to <the module> end to end: map what is untested, propose the plan, write tests covering the main paths and the edges that look fragile, run them, and fix only what the tests prove broken. Report coverage before and after, and what you deliberately left untested."
+},
+{
+"q": "fix the failing build",
+"d": "agent",
+"p": "Fix the failing build: read the CI logs, reproduce locally, find the actual cause rather than the first error printed, apply the smallest fix, and rerun until green. If the failure is flaky or environmental, say so instead of patching over it. Report the cause and the change."
+}
+]

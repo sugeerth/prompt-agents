@@ -10,8 +10,8 @@ let failures = 0;
 const fail = m => { failures++; console.log('FAIL:', m); };
 const ok = m => console.log('  ok:', m);
 
-const L2 = 'Reason as long as you need, then show only the integrated answer and one line of why.';
-const L3 = 'Reason as long as you need: weigh 3 approaches against my constraints, then show only the winner, one line of why, and what would flip the call.';
+const L2 = 'Think as long as you need, then show only the integrated answer and one line of why.';
+const L3 = 'Think as long as you need: weigh the real options against my constraints, then show only the winner, one line of why, and what would flip it.';
 const VERIFY = 'Check the answer once for the most likely error before replying.';
 
 (async () => {
@@ -56,7 +56,7 @@ const VERIFY = 'Check the answer once for the most likely error before replying.
 
   // 4. every scaffold keeps the working internal (the core promise)
   for (const line of [L2, L3]) {
-    if (!/Reason as long as you need/.test(line)) fail('scaffold suppresses reasoning (short-path risk): ' + line);
+    if (!/\b(reason|think) as long as you need\b/i.test(line)) fail('scaffold suppresses reasoning (short-path risk): ' + line);
     if (!/show only/.test(line)) fail('scaffold lacks an output contract: ' + line);
     if (!/one line of why/.test(line)) fail('scaffold lacks a residual justification slot: ' + line);
   }
@@ -108,7 +108,7 @@ const VERIFY = 'Check the answer once for the most likely error before replying.
 
   // 10. clicking the scaffold in the prompt turns reasoning off
   await set('10 days in japan with kids on a tight budget');
-  await page.locator('#prompt .seg', { hasText: 'Weigh 3 approaches' }).click();
+  await page.locator('#prompt .seg', { hasText: 'weigh the real options' }).click();
   t = await text();
   if (t.includes(L3)) fail('clicking scaffold did not remove it');
   else ok('clicking the scaffold turns reasoning off');

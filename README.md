@@ -7,28 +7,45 @@ ready to copy or launch straight into ChatGPT, Claude, Gemini, or Perplexity.
 ## The idea
 
 Most prompt tools make prompts *longer*. This one makes them **shorter and sharper**.
-Every generated prompt is answer-shape-first ("3 bullets", "one table", "steps only")
-with an explicit size cap, because that's what actually makes LLMs answer tightly.
-Users have no attention span — neither should prompts.
+Say what you want and leave the form alone, and the answer comes back tight; fix
+the form too, and you get a specific artifact. Both are one slider apart. Users
+have no attention span — neither should prompts, which is why prompt length here
+is a defect budget rather than a free resource.
+
+## The first screen is a box
+
+Before you type, the app is a heading, an input, four examples and one sentence
+explaining what is about to happen. The prompt card's buttons, the axes, the
+modifier chips and Fine-tune are simply not rendered — every one of them is
+meaningless without a topic, and a screenful of dead controls is what makes a
+tool feel like a cockpit instead of a place to start typing. They arrive the
+moment there is a prompt for them to act on, and stay for the length of a chain.
+
+On a phone this took the first screen from 2724px of scrolling to 844px — one
+screen, no scrolling, before the first keystroke.
 
 ## How it works
 
-- **Type one letter → suggestions.** 352 built-in completions of things real people
-  ask, across 31 life-and-work domains (cooking, money, code, parenting, travel,
-  nearby places, …) with full a–z coverage, so the first keystroke always helps.
+- **Type one letter → suggestions.** 886 built-in completions of things real
+  people ask, across 32 life-and-work domains (cooking, money, code, parenting,
+  travel, legal, care work, small-business admin, bureaucracy, accessibility, …)
+  with full a–z coverage and every common two-letter prefix resolved, so the
+  first keystroke always helps. Entries are tagged against what the engine
+  actually infers, not by feel: a generator audits every entry's domain tag
+  against `detectDomain` and fails the build on disagreement.
 - **Two-tower-style similarity matching.** The query and every entry are embedded
   into the same IDF-weighted token space and scored by cosine blended with
   character-trigram Jaccard — typos ("explan machine lerning") and reordered
   words ("salary negotiate") still land on the right entry. Fully client-side.
 - **Gold cache of the top real-world queries.** The head of the LLM query
   distribution — researched from published ChatGPT/Gemini/Perplexity usage data —
-  ships as 60 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
+  ships as 115 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
   served verbatim on similarity match, with chips and sliders still composable.
 - **Complex asks.** A multi-intent ask ("10 days in japan with kids on a budget")
   gets one guard line — "Cover every constraint I stated." — so nothing is dropped.
 - **Domain engine.** Each domain has a succinct prompt template in three depths
   (TL;DR / Standard / Deep) tuned to that kind of ask.
-- **One-tap modifiers.** 28 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
+- **One-tap modifiers.** 34 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
   each appends a short, battle-tested directive. The most relevant chips for your
   domain float to the front.
 - **Two axes.** Steer runs across the page, Depth runs up it — the pair defines
@@ -37,10 +54,11 @@ Users have no attention span — neither should prompts.
   answer's form. Audience (Beginner ↔ Expert) lives behind Fine-tune.
 - **Inline completion.** The rest of the highlighted suggestion is drawn in
   place, in grey, behind the cursor. Tab takes it. One keystroke to a whole ask.
-- **Go-deeper menu (details on demand).** By default every prompt ends with
-  "End with 3 numbered one-line ways to go deeper; I'll pick by number." — the
-  model answers in a few highly relevant sentences, then offers drill-downs you
-  invoke by replying with a number. Succinct understanding first, depth on demand.
+- **Go-deeper menu (details on demand).** By default a prompt ends with
+  "Then 3 numbered ways to go deeper." — the model answers in a few highly
+  relevant sentences, then offers drill-downs you invoke by replying with a
+  number. Succinct understanding first, depth on demand. It stays out of mission
+  briefs, which end with their own Report clause.
 - **The prompt is the control surface.** Click any piece of the generated prompt
   to edit it in place: click a modifier to remove it, click the answer-shape
   sentence to cycle depth, click the audience line to clear it.
@@ -78,15 +96,21 @@ when no topic cue fires ("my wifi keeps dropping" names no domain noun but is
 unmistakably a fix), and it stops a review request being framed as a drafting
 request.
 
-When confidence is low, the prompt asks instead of assuming: *"If my goal here
-is ambiguous, ask me one question before answering."* A confidently wrong frame
-costs more than a round trip.
+When there is genuinely nothing to go on, the prompt asks instead of assuming:
+*"Ask me one question first if my goal isn't clear."* A confidently wrong frame
+costs more than a round trip. But a well-formed question is not ambiguous just
+because no cue fired, so this now stays out of the way unless the ask really is
+bare — "sourdough" is the case it exists for.
+
+A question is also never a hand-off, however many delegate verbs it contains:
+*"is my landlord allowed to keep my deposit"* once built a mission brief with
+monitoring rules where a legal answer belonged.
 
 ## Agent tasks: hand it off, with a harness
 
 Some asks aren't questions — they're work: *set up ci for my repo*,
 *migrate my database*, *keep my prs green*. The intent layer recognizes
-**delegate** as its own goal ("Do this end to end — I want the result, not
+**delegate** as its own goal ("Do this end to end — the result, not
 instructions"), distinct from *do-it-myself*: "how do I set up CI" wants
 instructions, "set up CI for my repo" wants it done.
 
@@ -173,6 +197,37 @@ most three words and 24 characters, no instruction verbs, no markup, no generic
 filler. Everything else becomes an anonymous node: it still shapes the reasoning,
 it just never speaks. Malformed payloads are dropped rather than thrown, nodes
 and edges are capped, and the file has no path to a code or DOM sink at all.
+
+## Every word has to earn its place
+
+The product's whole thesis is that a short prompt gets a short answer, so prompt
+length is treated as a defect budget rather than a free resource. An adversarial
+audit of ~90 asks found two fixed boilerplate sentences accounting for **38% of
+every word the app emitted**, plus five places where two lines said one thing.
+What came out of that:
+
+- **The go-deeper line went from 13 words to 6** and stays out of mission briefs,
+  which end with their own Report clause. It was 52% of the prompt on `pasta recipe`.
+- **The clarify line** ("ask me one question first") now fires only where there
+  is genuinely nothing to go on. A well-formed question, or an ask long enough to
+  carry its own context, is not ambiguous just because no cue matched.
+- **The domain prefix and the goal line no longer say the same thing.** "Help me
+  decide:" followed by "I need to make a call here" is one sentence written
+  twice. Suppressed only for the pairs that are pure restatement — "Tech help:"
+  and "Lead with what is actually wrong" are not, so that one stays.
+- **The reasoning line and the graph line no longer overlap.** At L3 the scaffold
+  already says the constraints trade off, so an unnamed restatement of that is
+  cut; a finding that *names* which things are coupled survives, because that is
+  the one thing the scaffold cannot say.
+- **Two answer shapes never ship together.** When a scaffold fixes the output
+  contract ("show only the winner"), the domain's own shape sentence yields —
+  previously a prompt could ask for a ten-line itinerary and then forbid it.
+- **Chain-of-Draft** is restricted to domains where the bottleneck is calculation.
+  Proofreading in five-word steps is incoherent.
+
+Median prompt: **34 words**, mean 33, range 10–63 across the gated corpus. A
+trivial ask now costs ~16 words against ~47 for a genuinely complex one, and
+`tests/ui-quality.js` fails the build if that stops being true.
 
 ## The reasoning layer
 
@@ -261,13 +316,19 @@ when the structure earns it) → Always → Off.
 `npm test` runs everything; CI (`.github/workflows/eval.yml`) runs it on every
 push and PR.
 
-- `npm run test:eval` — two scored evals, no browser. The **complexity ladder**
+- `npm run test:eval` — seven scored evals, no browser. The **complexity ladder**
   against a labelled corpus with a confusion matrix, gated on accuracy plus
   three invariants (no reasoning spent on an atomic ask, no scaffold suppresses
   reasoning, spend monotonic in complexity). The **intent recognizer** against a
   labelled corpus, gated on accuracy plus invariants that no intent line ever
   dictates format and that ambiguous input yields low confidence.
-- `npm run test:ui` — drives the real app in headless Chromium: the domain
+- `npm run test:ui` — ten suites driving the real app in headless Chromium,
+  including **`ui-quality.js`**, which gates the prompts themselves: per-kind word
+  budgets, a redundancy detector that fails when two sentences share most of
+  their content words, verbatim-repeat and assembly-artefact checks, a median
+  ceiling, and proof that spend still adapts to the ask. Feature tests cannot see
+  a quality regression — a duplicated idea breaks nothing and fails nothing — so
+  this is where that gets caught. The rest cover: the domain
   engine across every domain, all modifier chips, clipboard, launch URLs, XSS
   escaping, deep links, mobile overflow, similarity matching, the gold cache,
   the reasoning layer, and every steer level — including a check that Native

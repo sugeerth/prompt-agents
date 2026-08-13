@@ -176,15 +176,15 @@
   const SCAFFOLD = {
     0: null,
     1: null,
-    2: "Reason as long as you need, then show only the integrated answer and one line of why.",
-    3: "Reason as long as you need: weigh 3 approaches against my constraints, then show only the winner, one line of why, and what would flip the call.",
+    2: "Think as long as you need, then show only the integrated answer and one line of why.",
+    3: "Think as long as you need: weigh the real options against my constraints, then show only the winner, one line of why, and what would flip it.",
   };
 
   /* Where the bottleneck is calculation rather than composition, even a simple
      ask benefits from a compressed chain — dense 5-word steps retain most of
      chain-of-thought's accuracy at a fraction of its length
      (Chain of Draft, arXiv 2502.18600). */
-  const COMPUTE_DOMAINS = new Set(["math", "code", "debug", "analyze", "money"]);
+  const COMPUTE_DOMAINS = new Set(["math", "code", "debug"]);
   const COMPUTE_STEPS = "Work in brief steps, five words each, then give the final answer.";
 
   /* domains where a wrong answer is expensive get one verification line */
@@ -230,7 +230,8 @@ const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "ma
      meaning anything — naming one produces visibly broken output ("'way' is
      the deciding factor"). Kept separate from the stoplist: these may still
      be counted, they may just never be NAMED. */
-  const UNNAMEABLE = new Set(("way ways thing things stuff idea ideas best worst help option options " +
+  const UNNAMEABLE = new Set(("people person persons guests folks everyone dollars days weeks months hours " +
+    "way ways thing things stuff idea ideas best worst help option options " +
     "kind sort type lot bit part parts side item items area point points").split(" "));
 
   /* A slot is user text being interpolated into a line that sits in
@@ -269,12 +270,27 @@ const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "ma
     /* Exactly one line, rarest and most actionable finding first. Centrality
        findings come last because they have the highest false-positive rate. */
 
-    // a cycle: quantities that constrain each other and cannot be fixed in turn
+    /* At L3 the scaffold has already said the constraints trade off — it asks
+       the model to weigh the real options AGAINST them. So the tension
+       findings, named or not, are that same sentence a second time, which is
+       the most common way a generated prompt turns bloated. Findings that say
+       something the scaffold cannot — a forced order, a hinge, a pivot — still
+       earn their line. */
+    const tensionCovered = metrics.level >= 3;
+
+    /* A cycle: quantities that constrain each other and cannot be fixed in
+       turn. Naming them survives even at L3, because WHICH things are coupled
+       is the one thing the scaffold cannot say. The unnamed fallback does not:
+       "some of these depend on each other" next to "weigh the real options
+       against my constraints" is the same sentence with fewer facts in it. */
     if (g.cyclic.length && g.cycleGroups[0].length >= 2) {
       const named = safeSlots(g.cycleGroups[0], g.tainted);
-      return [{ kind: "graph", text: named.length >= 2
-        ? `${pretty(named)} depend on each other — fixing one changes what the others can be.`
-        : "Some of these depend on each other — settling one changes what the others can be." }];
+      if (named.length >= 2)
+        return [{ kind: "graph",
+          text: `${pretty(named)} depend on each other — fixing one changes what the others can be.` }];
+      if (!tensionCovered)
+        return [{ kind: "graph",
+          text: "Some of these depend on each other — settling one changes what the others can be." }];
     }
 
     /* Disconnected sub-problems. Gated hard: a split is far more often an edge
@@ -284,8 +300,9 @@ const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "ma
       return [{ kind: "graph", text: "These are separate problems — neither one's answer constrains the other." }];
 
     // tightly interlocking requirements, whatever their names
-    if (g.treewidth >= 2 && g.circuitRank >= 1)
-      return [{ kind: "graph", text: "These requirements pull against each other — satisfying all of them at once may not be possible." }];
+    if (!tensionCovered && g.treewidth >= 2 && g.circuitRank >= 1)
+      return [{ kind: "graph",
+        text: "These requirements pull against each other — satisfying all of them at once may not be possible." }];
 
     // a real dependency chain: order is forced
     if (g.depth >= 2 && g.criticalPath.length >= 3) {
