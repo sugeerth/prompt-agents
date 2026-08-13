@@ -292,6 +292,16 @@ const AUDIENCE = [
   "I know the basics — skip them.",
 ];
 
+/* Depth said as a want rather than a format. Guided's whole rule is to state
+   what you're after and leave the form alone — and how much you want IS what
+   you're after, not how it should look. Standard says nothing, because the
+   middle of a slider should not add a sentence. */
+const WANT = [
+  "Keep it short — I want the essentials, not the full picture.",
+  null,
+  "Go thorough — I'd rather have the whole picture than a quick answer.",
+];
+
 function shapeFor(dom, depth) {
   const s = dom.shapes[depth];
   if (s) return s;
@@ -400,9 +410,14 @@ function score(qEmb, d) {
 
 /* ---------- state ---------- */
 const state = { topic: "", domain: null, depth: 1, tone: 1, mods: new Set(), sel: -1, matches: [],
-                drill: true, gold: null, reason: "auto", graphOpen: false, steer: "guided" };
+                drill: true, gold: null, reason: "auto", graphOpen: false, steer: "guided",
+                /* steps already committed; the one being typed is always the last, unsaved one */
+                chain: [], padTouched: false };
 const REASON = window.PS_REASON;
 const INTENT = window.PS_INTENT;
+const CHAIN = window.PS_CHAIN;
+const PROFILE = window.PS_PROFILE;
+const BRIDGE = window.PS_BRIDGE;
 
 /* ---------- elements ---------- */
 const $ = id => document.getElementById(id);
@@ -435,28 +450,63 @@ function findMatches(text) {
     if (i === 0) starts.push(v);
     else if (i > 0) contains.push(v);
   }
-  let out = golds.concat(
-    starts.concat(contains).filter(v => !golds.some(g => g.t === v.t))
-  );
+  /* Tiers, strongest evidence first: a hand-tuned prompt for this exact ask,
+     then what starts with what you typed, then what merely contains it, then
+     what only resembles it. The tier is never traded away — it is the reason
+     the list feels predictable. */
+  const seen = new Set(golds.map(g => g.t));
+  const keep = (v, tier) => (seen.has(v.t) ? null : (seen.add(v.t), { ...v, tier }));
+  let out = golds.map(g => ({ ...g, tier: 0 }))
+    .concat(starts.map(v => keep(v, 1)).filter(Boolean))
+    .concat(contains.map(v => keep(v, 2)).filter(Boolean));
 
   if (out.length < 7 && t.length >= 4) {
     const fuzzy = [];
     for (const d of SIM.docs) {
       if (d.ref.type !== "vocab") continue;
       const v = VOCAB[d.ref.i];
-      if (out.some(o => o.t === v.t)) continue;
+      if (seen.has(v.t)) continue;
       const s = score(qEmb, d);
-      if (s >= 0.34) fuzzy.push({ ...v, s });
+      if (s >= 0.34) fuzzy.push({ ...v, s, tier: 3 });
     }
     fuzzy.sort((a, b) => b.s - a.s);
     out = out.concat(fuzzy);
   }
+
+  /* Personalization breaks ties; it never crosses a tier. Someone who cooks
+     every day should see the cooking reading of an ambiguous word first — but
+     an exact prefix match still outranks a merely familiar one, however often
+     they have used it. Re-ranking inside a tier is the whole permitted power. */
+  if (PROFILE && PROFILE.enabled() && out.length > 1) {
+    out = out
+      .map((o, i) => ({ o, i, k: (o.s || 0) + PROFILE.boost(o) }))
+      .sort((a, b) => a.o.tier - b.o.tier || b.k - a.k || a.i - b.i)
+      .map(b => b.o);
+  }
   return out.slice(0, 7);
+}
+
+/* The rest of the highlighted suggestion, drawn in place behind the cursor.
+   Tab takes it. This is the shortest path from one keystroke to a full ask,
+   and it only appears when it can be honest: the suggestion must actually
+   continue what was typed, and the text must be short enough that the input
+   hasn't scrolled, or the grey half would sit under the wrong letters. */
+function renderGhost() {
+  const el = $("ghost");
+  if (!el) return;
+  const v = q.value;
+  const pick = state.matches[state.sel >= 0 ? state.sel : 0];
+  const fits = v.length > 0 && v.length <= 38 && !/^\s|\s$/.test(v);
+  const can = fits && pick && sug.classList.contains("open") &&
+    pick.t.length > v.length && pick.t.toLowerCase().startsWith(v.toLowerCase());
+  el.innerHTML = can
+    ? `<span class="gtyped">${esc(v)}</span>${esc(pick.t.slice(v.length))}`
+    : "";
 }
 
 function renderSug() {
   const t = q.value.trim().toLowerCase();
-  if (!state.matches.length) { sug.classList.remove("open"); return; }
+  if (!state.matches.length) { sug.classList.remove("open"); renderGhost(); return; }
   sug.innerHTML = state.matches.map((m, i) => {
     const dom = DOMAINS[m.d] || DOMAINS.general;
     const idx = m.t.indexOf(t);
@@ -469,6 +519,7 @@ function renderSug() {
       <span class="em">${em}</span><span>${label}</span><span class="dl">${dl}</span></div>`;
   }).join("");
   sug.classList.add("open");
+  renderGhost();
 }
 
 function accept(i) {
@@ -480,6 +531,7 @@ function accept(i) {
   state.gold = m.gold || null;
   state.matches = []; state.sel = -1;
   renderSug(); renderChips(); update();
+  observe("accept");
 }
 
 /* ---------- chips ---------- */
@@ -530,6 +582,20 @@ function reasonSegs(domId) {
   return out;
 }
 
+/* Structure handed in by another system, on the same terms as our own graph:
+   one line at most, and only the labels that survived sanitizing.
+
+   Kept separate from the reasoning scaffold because it has to reach places the
+   scaffold deliberately doesn't. A delegated task is the likeliest thing a host
+   planner has a graph about, and the mission brief replaces the generic
+   scaffold entirely — so routing this through the scaffold would silently drop
+   it exactly where it matters most. */
+function externalSegs() {
+  if (!BRIDGE || !BRIDGE.findings) return [];
+  if (state.steer === "native" || state.reason === "off" || state.noGraph) return [];
+  return BRIDGE.findings().map(s => ({ text: s.text, add: true, kind: "graph" }));
+}
+
 /* What the user WANTS, stated once — never how to format it. */
 function intentSegs() {
   if (!INTENT || state.noIntent || !state.topic.trim()) return [];
@@ -548,7 +614,35 @@ const tidy = t => {
   return (s.charAt(0).toUpperCase() + s.slice(1)) + (/[.?!]$/.test(s) ? "" : ".");
 };
 
+/* ---------- chaining ----------
+   The steps already committed, plus the one being typed. Prompts are rebuilt
+   from topics rather than stored, so a chain can never hold a stale prompt. */
+function chainSteps() {
+  return state.chain.concat([{
+    topic: state.topic,
+    constraints: CHAIN ? CHAIN.constraints(state.topic) : [],
+  }]);
+}
+
+/* What links this step to the one before it: what that step asked, the
+   instruction to build rather than restate, and any constraint still in force.
+   Written for the user so they only ever type the new part. */
+function chainSegs() {
+  if (!CHAIN || !state.chain.length || !state.topic.trim() || state.noChain) return [];
+  return CHAIN.linkSegs(chainSteps(), state.chain.length)
+    .map(s => ({ text: s.text, add: true, kind: "chain" }));
+}
+
 function currentSegs() {
+  const segs = stepSegs();
+  const link = chainSegs();
+  /* The link goes directly after the ask itself: the model should know what
+     it is continuing before it reads how to answer. */
+  if (link.length && segs.length) segs.splice(1, 0, ...link);
+  return segs;
+}
+
+function stepSegs() {
   const active = MODIFIERS.filter(m => state.mods.has(m.id));
 
   /* Native: the ask in the user's own words, aimed by intent, then out of the
@@ -576,6 +670,7 @@ function currentSegs() {
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
     segs.push(...reasonSegs(g.d));
+    segs.push(...externalSegs());
     if (state.drill && g.d !== "image") segs.push({ text: DRILL, add: false, kind: "drill" });
     return segs;
   }
@@ -585,16 +680,22 @@ function currentSegs() {
   /* Guided: keep the domain's framing and the follow-up menu, but drop the
      answer-shape sentence and its size caps — say what's wanted, not how long
      the reply may be. */
+  const extra = [];
   if (state.steer === "guided") {
     // the mission brief is a behavioral contract, not an answer shape — keep it whole
     if (domId !== "agent")
       for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
+    /* The shape is gone but the appetite isn't: say how much is wanted without
+       saying what the answer must look like. */
+    if (domId !== "agent" && WANT[state.depth])
+      extra.push({ text: WANT[state.depth], add: true, kind: "want" });
     segs.splice(1, 0, ...intentSegs());
   }
   // reasoning goes before the go-deeper menu and the paste marker
+  extra.push(...reasonSegs(domId));
+  extra.push(...externalSegs());
   const at = segs.findIndex(s => s.kind === "drill" || s.kind === "marker");
-  const rs = reasonSegs(domId);
-  if (at === -1) segs.push(...rs); else segs.splice(at, 0, ...rs);
+  if (at === -1) segs.push(...extra); else segs.splice(at, 0, ...extra);
   return segs;
 }
 
@@ -609,6 +710,8 @@ const SEG_HINTS = {
   reason: "Added by the reasoning layer — click to turn reasoning off",
   verify: "Added by the reasoning layer — click to turn reasoning off",
   drill: "Click to remove the go-deeper menu",
+  chain: "Carried from the previous step — click to unlink this step",
+  want: "How much you asked for — click to reset to Standard",
 };
 
 function syncExamples() {
@@ -619,6 +722,7 @@ function syncExamples() {
 
 function update() {
   syncExamples();
+  if (state.topic.trim()) applyRemembered(state.domain || detectDomain(state.topic));
   const segs = currentSegs();
   if (!segs.length) {
     promptEl.className = "empty";
@@ -718,17 +822,121 @@ promptEl.addEventListener("click", e => {
   else if (seg.kind === "graph") state.noGraph = true;
   else if (seg.kind === "reason" || seg.kind === "verify") { state.reason = "off"; syncReasonUI(); }
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
+  else if (seg.kind === "chain") state.noChain = true;
+  else if (seg.kind === "want") {
+    state.depth = 1; $("depth").value = "1"; $("depthOut").textContent = depthLabels[1];
+  }
   update();
 });
 
 /* ---------- copy + launch ---------- */
-function copyPrompt(silent) {
+function copyPrompt(silent, why) {
   const segs = currentSegs();
   if (!segs.length) { q.focus(); return ""; }
   const text = segsToText(segs);
   navigator.clipboard && navigator.clipboard.writeText(text);
   if (!silent) showToast("Copied — paste it into any AI ✦");
+  observe(why || "copy");
   return text;
+}
+
+/* ---------- chain UI ----------
+   A chain is worth having only if it costs almost nothing to build: one tap to
+   keep the current prompt, then type the next thought in shorthand. The strip
+   above the box is the whole mental model — these are the steps so far, this
+   is the one you're writing. */
+const chainEl = $("chainstrip"), chainAddBtn = $("chainadd");
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+
+function renderChain() {
+  if (!CHAIN) return;
+  const n = state.chain.length;
+  chainEl.classList.toggle("on", n > 0);
+  if (!n) { chainEl.innerHTML = ""; syncChainUI(); return; }
+  chainEl.innerHTML = `<span class="exlabel">Chain:</span>` + state.chain.map((s, i) =>
+    `<span class="step"><span class="n">${i + 1}</span>` +
+    `<span class="t" title="${esc(s.topic)}">${esc(CHAIN.condense(s.topic, 40))}</span>` +
+    `<button class="x" data-i="${i}" type="button" title="Remove this step" aria-label="Remove step ${i + 1}">×</button></span>` +
+    `<span class="steparrow">→</span>`
+  ).join("") + `<span class="step"><span class="n">${n + 1}</span><span class="t">writing…</span></span>`;
+  syncChainUI();
+}
+
+function syncChainUI() {
+  const has = state.chain.length > 0;
+  const full = state.chain.length >= CHAIN.MAX - 1;
+  chainAddBtn.textContent = has ? "+ Step " + (state.chain.length + 2) : "+ Next step";
+  chainAddBtn.disabled = full;
+  chainAddBtn.title = full
+    ? "A chain this long is better split into separate asks"
+    : "Keep this prompt and write the next one — it will know what this one asked";
+  $("copy").textContent = has ? "Copy step " + (state.chain.length + 1) : "Copy prompt";
+  let all = $("copyall");
+  if (has && !all) {
+    all = document.createElement("button");
+    all.className = "btn"; all.id = "copyall"; all.type = "button";
+    all.addEventListener("click", () => {
+      const text = CHAIN.pipeline(chainWithCurrent());
+      if (!text) return;
+      navigator.clipboard && navigator.clipboard.writeText(text);
+      showToast(`Copied all ${state.chain.length + 1} steps as one prompt ✦`);
+    });
+    chainAddBtn.after(all);
+  }
+  if (all) {
+    all.style.display = has ? "" : "none";
+    all.textContent = `Copy all ${state.chain.length + 1}`;
+    all.title = "All steps as one prompt, run in order — for an agent that can do the whole sequence";
+  }
+}
+
+/* Every committed step plus the one on screen, each with its prompt text. */
+function chainWithCurrent() {
+  const cur = segsToText(currentSegs());
+  const steps = state.chain.map(s => ({ topic: s.topic, prompt: s.prompt }));
+  if (cur) steps.push({ topic: state.topic, prompt: cur });
+  return steps;
+}
+
+function addStep() {
+  if (!CHAIN) return;
+  const segs = currentSegs();
+  if (!segs.length || state.chain.length >= CHAIN.MAX - 1) return;
+  state.chain.push({
+    topic: state.topic,
+    prompt: segsToText(segs),
+    constraints: CHAIN.constraints(state.topic),
+  });
+  q.value = ""; state.topic = ""; state.domain = null; state.gold = null;
+  state.matches = []; state.sel = -1; state.noChain = false;
+  q.placeholder = "then… what happens next?";
+  renderChain(); renderSug(); renderChips(); update(); saveChain();
+  q.focus();
+}
+
+function removeStep(i) {
+  state.chain.splice(i, 1);
+  if (!state.chain.length) q.placeholder = "explain machine learning · fix my resume · trip to japan…";
+  renderChain(); update(); saveChain();
+}
+
+chainAddBtn.addEventListener("click", addStep);
+chainEl.addEventListener("click", e => {
+  const b = e.target.closest(".x");
+  if (b) removeStep(+b.dataset.i);
+});
+
+/* A chain is worth sharing, so it lives in the URL. Written without firing a
+   navigation so the hash listener doesn't re-apply what we just wrote — and
+   wrapped, because some browsers refuse history writes on a file:// page. */
+function saveChain() {
+  try {
+    const c = CHAIN.encode(state.chain);
+    const h = new URLSearchParams(location.hash.slice(1));
+    c ? h.set("c", c) : h.delete("c");
+    const s = h.toString();
+    history.replaceState(null, "", s ? "#" + s : location.pathname + location.search);
+  } catch (e) { /* a URL we can't update is not a reason to lose the chain */ }
 }
 
 function showToast(msg) {
@@ -751,7 +959,7 @@ launchEl.innerHTML = TOOLS.map((t, i) =>
 launchEl.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const tool = TOOLS[+b.dataset.t];
-  const text = copyPrompt(true);
+  const text = copyPrompt(true, "launch");
   if (!text) return;
   if (tool.url) window.open(tool.url(text), "_blank");
   else { window.open(tool.home, "_blank"); showToast("Copied — paste it into " + tool.name + " ✦"); }
@@ -798,7 +1006,10 @@ document.addEventListener("click", e => {
 /* ---------- sliders ---------- */
 const depthLabels = ["TL;DR", "Standard", "Deep"];
 const toneLabels = ["Beginner", "Anyone", "Expert"];
-$("depth").addEventListener("input", e => { state.depth = +e.target.value; $("depthOut").textContent = depthLabels[state.depth]; update(); });
+$("depth").addEventListener("input", e => {
+  state.depth = +e.target.value; state.padTouched = true;
+  $("depthOut").textContent = depthLabels[state.depth]; update();
+});
 $("tone").addEventListener("input", e => { state.tone = +e.target.value; $("toneOut").textContent = toneLabels[state.tone]; update(); });
 
 /* details-on-demand toggle */
@@ -811,7 +1022,11 @@ function syncDrillUI() {
 $("drill").addEventListener("click", () => { state.drill = !state.drill; syncDrillUI(); update(); });
 syncDrillUI();
 
-/* steer: how much the prompt is allowed to shape the model's reply */
+/* Two axes define the prompt, and they are not independent: across is how much
+   you steer, up is how much you want. Depth only exists once you are shaping
+   the answer — until then the length is the model's call — so the vertical
+   axis locks rather than lying about having an effect. Showing it locked
+   teaches the relationship; hiding it would just look broken. */
 const STEER_MODES = ["native", "guided", "shaped"];
 const STEER_LABEL = { native: "Native", guided: "Guided", shaped: "Shaped" };
 const STEER_HINT = {
@@ -820,16 +1035,26 @@ const STEER_HINT = {
   shaped: "fix the answer's form",
 };
 function syncSteerUI() {
-  $("steer").textContent = STEER_LABEL[state.steer];
-  $("steerOut").textContent = STEER_HINT[state.steer];
-  // Depth only means anything when the prompt is shaping the answer
-  $("depthWrap").style.display = state.steer === "shaped" ? "" : "none";
-  // so does the follow-up menu
+  const i = STEER_MODES.indexOf(state.steer);
+  $("steer").value = String(i);
+  $("steerOut").textContent = STEER_LABEL[state.steer];
+  $("steerHint").textContent = STEER_HINT[state.steer];
+  /* Native hands length to the model entirely, so the vertical axis has
+     nothing to say there. Everywhere else it does: as a want in Guided, as a
+     shape in Shaped. */
+  const locked = state.steer === "native";
+  $("depthWrap").classList.toggle("locked", locked);
+  $("depth").disabled = locked;
+  $("depthWrap").title = locked
+    ? "Native leaves the length to the model — slide Steer right to ask for more or less"
+    : "How much of the answer you want";
+  // the follow-up menu is also a shape, so Native has no use for it
   $("drill").disabled = state.steer === "native";
   $("drill").style.opacity = state.steer === "native" ? ".4" : "";
 }
-$("steer").addEventListener("click", () => {
-  state.steer = STEER_MODES[(STEER_MODES.indexOf(state.steer) + 1) % STEER_MODES.length];
+$("steer").addEventListener("input", e => {
+  state.steer = STEER_MODES[+e.target.value] || "guided";
+  state.padTouched = true;
   syncSteerUI(); update();
 });
 syncSteerUI();
@@ -848,6 +1073,79 @@ $("reason").addEventListener("click", () => {
   syncReasonUI(); update();
 });
 syncReasonUI();
+
+/* ---------- personalization ----------
+   The app gets better at YOUR asks by watching which prompts you actually take
+   — nothing more. It stays in this browser: no account, no cookie, no beacon,
+   nothing sent anywhere. That is not a limitation to work around, it is the
+   product; a prompt box that phones home is not one people should paste their
+   real problems into. The switch and the forget button are in plain sight
+   because a memory you cannot inspect or erase is not a feature, it's a leak. */
+function observe(type) {
+  if (!PROFILE || !state.topic.trim()) return;
+  const domId = state.domain || detectDomain(state.topic);
+  const r = INTENT ? INTENT.recognize(state.topic) : null;
+  PROFILE.observe({
+    type, text: state.gold ? state.gold.q : state.topic, domain: domId,
+    intent: r ? r.id : null, steer: state.steer, depth: state.depth,
+  });
+  if (type !== "type") syncLearnUI();
+}
+
+/* Settings the user endorsed last time they took a prompt in this domain.
+   Applied only until they touch the axes themselves — a remembered default is
+   a starting point, never an override of a live decision. */
+let lastDomain = null;
+function applyRemembered(domId) {
+  if (!PROFILE || !PROFILE.enabled() || state.padTouched || domId === lastDomain) return;
+  lastDomain = domId;
+  const p = PROFILE.prefs(domId);
+  if (!p) return;
+  if (p.steer && STEER_MODES.indexOf(p.steer) >= 0) { state.steer = p.steer; syncSteerUI(); }
+  if (typeof p.depth === "number" && p.depth >= 0 && p.depth <= 2) {
+    state.depth = p.depth;
+    $("depth").value = String(p.depth);
+    $("depthOut").textContent = depthLabels[p.depth];
+  }
+}
+
+function syncLearnUI() {
+  if (!PROFILE) return;
+  const on = PROFILE.enabled(), b = $("learn"), note = $("learnnote");
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-pressed", String(on));
+  $("learnOut").textContent = on ? "On" : "Off";
+  const s = on ? PROFILE.summary() : null;
+  note.innerHTML = !on
+    ? "Off — nothing about you is stored."
+    : s && s.tokens
+      ? `Remembers ${s.tokens} words from ${s.asks} asks, in this browser only. ` +
+        `<button data-forget="1" type="button">Forget everything</button>`
+      : "Nothing remembered yet. Whatever it learns stays in this browser.";
+}
+if (PROFILE) {
+  $("learn").addEventListener("click", () => { PROFILE.setEnabled(!PROFILE.enabled()); syncLearnUI(); });
+  $("learnnote").addEventListener("click", e => {
+    if (!e.target.closest("[data-forget]")) return;
+    PROFILE.forget(); syncLearnUI(); showToast("Forgotten — nothing remembered ✦");
+  });
+  syncLearnUI();
+}
+
+/* ---------- external structure ----------
+   The reasoning layer reads the shape of the ask. Sometimes another system
+   already knows that shape better — a planner's dependency graph, a host page
+   that knows the project. This lets that system hand its graph in.
+
+   Everything arriving this way is untrusted, on the same footing as text
+   pasted by a stranger: bridge.js counts its structure but only ever names a
+   label that survives the same sanitizer the app uses on its own graph. */
+if (BRIDGE) {
+  try {
+    if (BRIDGE.listen) BRIDGE.listen(window);
+    if (BRIDGE.adopt) BRIDGE.adopt(window, location);
+  } catch (e) { /* a host that hands us nonsense must not take the app down */ }
+}
 
 /* ---------- init ---------- */
 $("vocabnote").textContent = VOCAB.length
@@ -884,11 +1182,29 @@ tuneBtn.addEventListener("click", () => {
   tuneBtn.setAttribute("aria-expanded", String(open));
 });
 
-/* deep link: #t=<topic>, applied on load and on hash change */
+/* Deep link: #t=<topic> for one prompt, #c=<step|step|…> for a whole chain.
+   Chains store only the typed topics — each step's prompt is rebuilt by the
+   current engine, so a link shared today can't paste yesterday's wording. */
+function rebuildStep(topic) {
+  const held = { topic: state.topic, domain: state.domain, gold: state.gold };
+  state.topic = topic; state.domain = null; state.gold = null;
+  const prompt = segsToText(stepSegs());
+  state.topic = held.topic; state.domain = held.domain; state.gold = held.gold;
+  return { topic, prompt, constraints: CHAIN ? CHAIN.constraints(topic) : [] };
+}
+
 function applyHash() {
   const hash = new URLSearchParams(location.hash.slice(1));
+  const c = hash.get("c");
+  if (c && CHAIN) {
+    state.chain = CHAIN.decode(c).map(s => rebuildStep(s.topic));
+    if (state.chain.length) q.placeholder = "then… what happens next?";
+    renderChain();
+  }
   const t = hash.get("t");
   if (t) { q.value = t; q.dispatchEvent(new Event("input")); state.matches = []; renderSug(); }
+  else update();
 }
 window.addEventListener("hashchange", applyHash);
+renderChain();
 applyHash();

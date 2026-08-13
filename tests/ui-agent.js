@@ -21,7 +21,12 @@ const ok = m => console.log('  ok:', m);
   const text = () => page.locator('#prompt').innerText();
   const metrics = () => page.locator('#metrics').innerText();
   const set = async q => { await page.fill('#q', ''); await page.fill('#q', q); await page.keyboard.press('Escape'); await page.waitForTimeout(60); };
-  const steer = async mode => { while ((await page.locator('#steer').innerText()) !== mode) await page.click('#steer'); await page.waitForTimeout(40); };
+  const MODES = ['Native', 'Guided', 'Shaped'];
+  const steer = async mode => {
+    await page.locator('#steer').fill(String(MODES.indexOf(mode)));
+    await page.locator('#steer').dispatchEvent('input');
+    await page.waitForTimeout(40);
+  };
 
   // 1. a delegated task is recognized as hand-off, not instructions
   await set('set up ci for my repo');

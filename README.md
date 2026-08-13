@@ -31,8 +31,12 @@ Users have no attention span — neither should prompts.
 - **One-tap modifiers.** 28 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
   each appends a short, battle-tested directive. The most relevant chips for your
   domain float to the front.
-- **Two sliders.** Depth (TL;DR ↔ Deep) and Audience (Beginner ↔ Expert) reshape
-  the prompt live.
+- **Two axes.** Steer runs across the page, Depth runs up it — the pair defines
+  the prompt in one glance. Depth is locked only in Native, where the model owns
+  the length; in Guided it states how much you *want*, in Shaped it fixes the
+  answer's form. Audience (Beginner ↔ Expert) lives behind Fine-tune.
+- **Inline completion.** The rest of the highlighted suggestion is drawn in
+  place, in grey, behind the cursor. Tab takes it. One keystroke to a whole ask.
 - **Go-deeper menu (details on demand).** By default every prompt ends with
   "End with 3 numbered one-line ways to go deeper; I'll pick by number." — the
   model answers in a few highly relevant sentences, then offers drill-downs you
@@ -96,6 +100,79 @@ one-liner to full checkpoints and two-strike stop rules. Agent chips (Plan
 first, Define done, Show proof, Scope guard, Escalate, Clean up) cover the
 top failure modes of long-horizon agents, and six gold prompts ship for the
 most-delegated tasks.
+
+## Chaining: prompts that know about each other
+
+One prompt is rarely the whole job. You ask for a trip plan, then what to pack,
+then what it will cost. Today people retype the context every time — or worse,
+they don't, and the model answers the second question as if the first never
+happened.
+
+**+ Next step** keeps the current prompt and clears the box. Type the next
+thought in shorthand and the link is written for you:
+
+> Help me with: what should we pack. **Step 1 asked:** 10 days in japan with kids on a tight budget. This continues from your answer to step 1 — build on it, don't repeat it. **The constraints still apply:** on a tight budget, with kids.
+
+Three things carry across a step boundary, and each is there for a reason:
+
+- **The subject**, but only when the new step can't stand on its own. "What
+  should we pack" leans on step 1; "what winter clothes should we pack for our
+  japan trip" doesn't, and restating it would just make the prompt longer.
+  Detection is two independent tells — a continuation opener or an anaphor, or a
+  short ask sharing no content word with the step before it.
+- **Don't-repeat-it**, which is what actually keeps chained answers short.
+- **The constraints.** "On a tight budget" was said once, in step 1, and it still
+  governs step 3. The extractor is deliberately narrow — money, time, company,
+  dietary and skill floors only — because a wrongly carried constraint silently
+  changes the answer, while a missed one costs a retype.
+
+Chains come out two ways: **Copy step N** for pasting as the conversation
+progresses, or **Copy all N** for one numbered pipeline prompt an agent can run
+end to end. A chain lives in the URL (`#c=…`), so it survives a reload and can be
+shared — and because only the typed topics are stored, each step's prompt is
+rebuilt by the current engine rather than pasted from an older one.
+
+## Personalization, without telling anyone
+
+The app gets better at *your* asks by watching which prompts you actually take —
+a small **user vector** over the words you use, decayed so old interests fade
+(~30-day half-life), pruned to 240 tokens, and weighted by how much each signal
+really reveals: copying or launching a prompt counts fully, picking a suggestion
+counts half, idle typing barely counts at all.
+
+It re-ranks suggestions and restores the Steer/Depth you last endorsed in that
+domain. Two limits keep it honest: the boost is **capped at 0.12 and can never
+cross a match tier**, so an exact prefix match always outranks a merely familiar
+one; and remembered settings apply only until you touch the axes yourself.
+
+**Nothing leaves the browser.** No account, no cookie, no analytics, no beacon,
+no third party — one `localStorage` key, an on/off switch, a line saying exactly
+how much is remembered, and a Forget-everything button, all in plain sight.
+`profile.js` is tested for this: its eval greps the source and fails if a network
+API appears anywhere in it. (Cross-site browsing history is not available to a
+web page at all — browsers block it by design — so no honest version of this
+feature can read what you did on other sites, and this one doesn't try.)
+
+## Taking structure from another system
+
+`bridge.js` lets a host page, planner or knowledge graph hand its own structure
+graph to the reasoning layer, through three entry points that all land in the
+same validator: `postMessage` (`{type:"ps:graph", payload}`), a
+`window.PS_EXTERNAL_GRAPH` global set before load, or a `#g=` URL fragment.
+
+```js
+{ nodes: [{ id, label, kind? }],
+  edges: [{ from, to, type? }],   // constrain | seq | cond | couple
+  source: "planner-x" }
+```
+
+An external graph is **untrusted input on the same footing as text pasted by a
+stranger**. Its structure is counted freely; its words are only ever *named* if
+they survive the same sanitizer the app uses on its own graph — lowercased, at
+most three words and 24 characters, no instruction verbs, no markup, no generic
+filler. Everything else becomes an anonymous node: it still shapes the reasoning,
+it just never speaks. Malformed payloads are dropped rather than thrown, nodes
+and edges are capped, and the file has no path to a code or DOM sink at all.
 
 ## The reasoning layer
 
@@ -198,8 +275,9 @@ push and PR.
 
 No build step, no dependencies, no network calls, nothing leaves the browser.
 `index.html` + `app.js` (engine) + `intent.js` (goal recognition) + `reason.js`
-(reasoning layer) + `data.js` (vocabulary, modifiers, gold cache) — that is the
-whole app.
+(reasoning layer) + `graph.js` (the intent graph) + `chain.js` (prompt chaining) +
+`profile.js` (the local user vector) + `bridge.js` (external structure) +
+`data.js` (vocabulary, modifiers, gold cache) — that is the whole app.
 
 Modifier phrasings and prompt patterns are distilled from public prompt-engineering
 guidance (Anthropic, OpenAI, Google) and community prompt libraries.

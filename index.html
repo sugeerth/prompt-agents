@@ -59,6 +59,57 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .s-item.s-gold .em{color:#d4a017}
 .s-item.s-gold .dl{color:#d4a017; font-weight:650}
 
+/* ---- inline completion: the rest of the top suggestion, shown in place ---- */
+#ghost{
+  position:absolute; left:0; top:0; right:0; bottom:0; z-index:1;
+  border:1.5px solid transparent; padding:18px 52px 18px 20px;
+  font:inherit; font-size:20px; line-height:1.55; color:var(--muted);
+  pointer-events:none; overflow:hidden; white-space:pre;
+}
+#ghost .gtyped{color:transparent}
+
+/* ---- chain: the steps already committed, above the box you're typing in ---- */
+#chainstrip{display:none; gap:6px; margin:0 0 10px; flex-wrap:wrap; align-items:center}
+#chainstrip.on{display:flex}
+.step{
+  display:inline-flex; align-items:center; gap:7px; max-width:290px;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink);
+  border-radius:999px; padding:5px 6px 5px 11px; font-size:13px;
+}
+.step .n{
+  flex:none; width:17px; height:17px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+  font-size:10.5px; font-weight:700; display:grid; place-items:center;
+}
+.step .t{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.step .x{
+  flex:none; border:none; background:none; color:var(--muted); cursor:pointer;
+  font:inherit; font-size:15px; line-height:1; padding:0 3px; border-radius:50%;
+}
+.step .x:hover{color:var(--ink)}
+.steparrow{color:var(--muted); font-size:12px}
+#chainstrip .exlabel{font-size:12px; color:var(--muted)}
+
+/* ---- the two axes that define the prompt: steer across, depth up ---- */
+.pad{
+  display:flex; gap:14px; align-items:stretch; margin-top:16px; padding:12px 16px 10px;
+  border:1px solid var(--line); border-radius:14px; background:var(--panel);
+}
+.axis-y{display:flex; flex-direction:column; align-items:center; gap:4px; flex:none; transition:opacity .15s}
+.axis-y.locked{opacity:.32}
+.vrange{
+  -webkit-appearance:slider-vertical; appearance:slider-vertical;
+  writing-mode:vertical-lr; direction:rtl;
+  width:22px; height:74px; padding:0; margin:0; accent-color:var(--accent);
+}
+.axname{font-size:11px; color:var(--muted); text-align:center; line-height:1.35}
+.axname output{display:block; color:var(--ink); font-weight:600; font-size:12px}
+.axis-x{flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:2px}
+.padread{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.padread output{font-size:14px; font-weight:650}
+.padread span{font-size:12px; color:var(--muted)}
+.axticks{display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted)}
+.axis-x input[type=range]{margin:2px 0 0}
+
 /* ---- chips ---- */
 .row{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; align-items:center}
 .rowlabel{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; width:100%; margin-top:14px}
@@ -95,6 +146,11 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 }
 .switch.on{background:var(--accent); border-color:var(--accent)}
 .switch.on::after{left:22px}
+.learnnote{font-size:11px; color:var(--muted); margin-top:6px; max-width:230px}
+.learnnote button{
+  font:inherit; font-size:11px; background:none; border:none; padding:0; cursor:pointer;
+  color:var(--accent); text-decoration:underline;
+}
 
 /* ---- prompt card ---- */
 #card{
@@ -158,9 +214,12 @@ footer a{color:var(--accent)}
   <header><h1>Prompt Studio ✦</h1><span class="tag">type less, get exactly what you want</span></header>
   <p class="sub">Type what you need. A ready-to-paste prompt builds itself — tap any part of it to change it.</p>
 
+  <div id="chainstrip"></div>
+
   <div class="inputwrap">
     <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
            placeholder="explain machine learning · fix my resume · trip to japan…" autofocus>
+    <div id="ghost" aria-hidden="true"></div>
     <span class="kbd">↵ copies</span>
     <div id="sug" role="listbox"></div>
   </div>
@@ -174,7 +233,21 @@ footer a{color:var(--accent)}
     <div class="count" id="count"></div>
     <div class="actions">
       <button class="btn primary" id="copy">Copy prompt</button>
+      <button class="btn" id="chainadd" type="button"
+              title="Keep this prompt and write the next one — it will know what this one asked">+ Next step</button>
       <div class="launch" id="launch"></div>
+    </div>
+  </div>
+
+  <div class="pad">
+    <div class="axis-y" id="depthWrap">
+      <input type="range" id="depth" class="vrange" min="0" max="2" step="1" value="1" aria-label="Depth">
+      <span class="axname">Depth<output id="depthOut">Standard</output></span>
+    </div>
+    <div class="axis-x">
+      <div class="padread"><output id="steerOut">Guided</output><span id="steerHint">say what I want</span></div>
+      <input type="range" id="steer" min="0" max="2" step="1" value="1" aria-label="Steer">
+      <div class="axticks"><span>Native</span><span>Guided</span><span>Shaped</span></div>
     </div>
   </div>
 
@@ -182,15 +255,6 @@ footer a{color:var(--accent)}
 
   <button id="tunebtn" class="tunebtn" type="button" aria-expanded="false">Fine-tune ▸</button>
   <div class="sliders" id="tune">
-    <div class="slider drillwrap">
-      <label><span>Steer</span><output id="steerOut">say what I want</output></label>
-      <button id="steer" class="modebtn" type="button"
-              title="Native: your words + what you want, then let the model answer its own way. Guided: adds light framing and a follow-up menu. Shaped: also fixes the answer's shape and length.">Guided</button>
-    </div>
-    <div class="slider" id="depthWrap">
-      <label><span>Depth</span><output id="depthOut">Standard</output></label>
-      <input type="range" id="depth" min="0" max="2" step="1" value="1">
-    </div>
     <div class="slider">
       <label><span>Audience</span><output id="toneOut">Anyone</output></label>
       <input type="range" id="tone" min="0" max="2" step="1" value="1">
@@ -205,6 +269,12 @@ footer a{color:var(--accent)}
       <button id="reason" class="modebtn" type="button"
               title="Auto: spend reasoning only when the ask is structurally complex. Always: force it. Off: never.">Auto</button>
     </div>
+    <div class="slider drillwrap">
+      <label><span>Learns from me</span><output id="learnOut">On</output></label>
+      <button id="learn" class="switch on" type="button" aria-pressed="true"
+              title="Ranks suggestions by what you actually use. Stored in this browser only — never sent anywhere."></button>
+      <div class="learnnote" id="learnnote"></div>
+    </div>
   </div>
 
   <footer>Free, private, nothing leaves your browser. <span id="vocabnote"></span>
@@ -213,10 +283,13 @@ footer a{color:var(--accent)}
 <div id="toast"></div>
 
 <!-- Bump ?v= on every release so browsers and the Pages CDN drop stale copies. -->
-<script src="data.js?v=17"></script>
-<script src="graph.js?v=17"></script>
-<script src="reason.js?v=17"></script>
-<script src="intent.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="data.js?v=19"></script>
+<script src="graph.js?v=19"></script>
+<script src="bridge.js?v=19"></script>
+<script src="reason.js?v=19"></script>
+<script src="intent.js?v=19"></script>
+<script src="chain.js?v=19"></script>
+<script src="profile.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
