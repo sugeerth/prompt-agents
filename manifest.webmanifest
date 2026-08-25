@@ -1,0 +1,17 @@
+{
+  "name": "Prompt Studio",
+  "short_name": "Prompt Studio",
+  "description": "Type what you need. A ready-to-paste prompt builds itself — short, specific, and private to your browser.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbfbfa",
+  "theme_color": "#3b6ea5",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

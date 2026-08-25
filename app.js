@@ -1207,7 +1207,7 @@ function syncLearnUI() {
   note.innerHTML = !on
     ? "Off — nothing about you is stored."
     : s && s.tokens
-      ? `Remembers ${s.tokens} words from ${s.asks} asks, in this browser only. ` +
+      ? `Remembers ${s.tokens} words from ${s.asks} ${s.asks === 1 ? "ask" : "asks"}, in this browser only. ` +
         `<button data-forget="1" type="button">Forget everything</button>`
       : "Nothing remembered yet. Whatever it learns stays in this browser.";
 }
@@ -1269,6 +1269,18 @@ tuneBtn.addEventListener("click", () => {
   tuneBtn.textContent = open ? "Fine-tune ▾" : "Fine-tune ▸";
   tuneBtn.setAttribute("aria-expanded", String(open));
 });
+
+/* ---------- works with no connection ----------
+   Nothing here talks to a server after load, so there is no reason the app
+   should stop working when the network does. Registered late and quietly: a
+   failure to register costs nothing, and a prompt box that throws on startup
+   because of an optional offline feature would be a bad trade. */
+if ("serviceWorker" in navigator &&
+    (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* offline is a bonus, not a requirement */ });
+  });
+}
 
 /* Deep link: #t=<topic> for one prompt, #c=<step|step|…> for a whole chain.
    Chains store only the typed topics — each step's prompt is rebuilt by the
