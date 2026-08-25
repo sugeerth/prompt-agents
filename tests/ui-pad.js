@@ -177,6 +177,41 @@ const ok = m => console.log('  ok:', m);
   if (requests.length) fail('the page talked to the network: ' + requests.join(', '));
   else ok('nothing is sent anywhere — the page makes no network request at all');
 
+  // 10. a browser that refuses site data must not take the app down with it
+  const ctx2 = await browser.newContext();
+  await ctx2.addInitScript(() => {
+    /* Private modes and "block all site data" settings make the accessor
+       itself throw, not merely return null — the harsher of the two failures
+       and the one that actually breaks apps. */
+    Object.defineProperty(window, 'localStorage', {
+      get() { throw new DOMException('The operation is insecure.', 'SecurityError'); },
+      configurable: true,
+    });
+  });
+  const p2 = await ctx2.newPage();
+  const errs2 = [];
+  p2.on('pageerror', e => errs2.push(e.message));
+  p2.on('console', m => { if (m.type() === 'error') errs2.push(m.text()); });
+  await p2.goto(URL);
+  await p2.fill('#q', '10 days in japan with kids on a tight budget');
+  await p2.keyboard.press('Escape');
+  await p2.waitForTimeout(140);
+  const blind = (await p2.locator('#prompt').innerText()).trim();
+  if (blind.split(/\s+/).length < 8) fail('no prompt built with storage blocked: ' + blind);
+  else ok('builds prompts normally when the browser refuses site data');
+  await p2.click('#copy');
+  await p2.click('#chainadd');
+  await p2.waitForTimeout(100);
+  await p2.fill('#q', 'what should we pack');
+  await p2.keyboard.press('Escape');
+  await p2.waitForTimeout(140);
+  if (!/Step 1 asked/.test(await p2.locator('#prompt').innerText()))
+    fail('chaining broke with storage blocked');
+  else ok('chaining and copying still work with storage blocked');
+  if (errs2.length) errs2.forEach(e => fail('error with storage blocked: ' + e));
+  else ok('and it throws nothing while doing it');
+  await ctx2.close();
+
   if (errors.length) errors.forEach(e => fail('console/page error: ' + e));
   await browser.close();
   console.log(failures ? `\n${failures} FAILURES` : '\nALL PAD TESTS PASSED');

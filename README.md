@@ -177,6 +177,35 @@ API appears anywhere in it. (Cross-site browsing history is not available to a
 web page at all — browsers block it by design — so no honest version of this
 feature can read what you did on other sites, and this one doesn't try.)
 
+## Works with no connection, and installs like an app
+
+The app makes no network calls of any kind once it has loaded — the vocabulary,
+the reasoning layer and the rest are just files — so there was nothing standing
+between it and working with no connection at all, which is often exactly when a
+prompt box is most useful. A service worker and a web manifest close that gap:
+add it to a home screen and it opens standalone, on a plane, with no bars.
+
+The caching strategy is chosen to make one specific failure impossible — a
+returning visitor pinned to a stale version:
+
+- **Navigations go to the network first** and fall back to cache only when the
+  network genuinely fails, so a fresh deploy is picked up the moment there is a
+  connection.
+- **Everything else is cache-first**, which is safe because those URLs carry a
+  `?v=` stamp: a new release requests new URLs, so a cached asset can never
+  shadow a newer one.
+- The worker `skipWaiting()`s and claims open pages, so a new version never
+  waits for every tab to close.
+- It refuses to touch another origin at all. A worker that proxies third-party
+  requests is a privacy surface this app has no use for.
+
+`tests/ui-offline.js` proves it rather than assuming it: it serves the repo over
+HTTP, lets the worker install, **pulls the network out from under the browser**,
+reloads, and asserts the app still builds a full prompt with the whole
+vocabulary and the reasoning layer intact. It also fails the build if the
+worker's cache version and the page's `?v=` stamp ever drift apart, which is the
+one bookkeeping mistake that would ship a stale app.
+
 ## Taking structure from another system
 
 `bridge.js` lets a host page, planner or knowledge graph hand its own structure

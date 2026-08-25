@@ -68,6 +68,9 @@
         [/^(set ?up|migrate|deploy|refactor|integrate|provision|maintain)\b/, 2.5],
         // everyday hand-offs, not just developer ones
         [/^(book|order|renew|cancel|research|handle|coordinate|arrange|reach out|contact|follow up)\b/, 2.5],
+        // plain English for "you do it": no domain noun, all hand-off
+        [/^(take (this|it) over|get (this|it) done|handle (this|it)|sort (this|it) out)\b/, 3],
+        [/\b(raise|increase|improve) (the )?(test )?coverage\b/, 2],
         [/\bfor me\b/, 2.5],
         // only as an imperative: "keep my prs green" is a hand-off, while
         // "is my landlord allowed to keep my deposit" is a question about a deposit

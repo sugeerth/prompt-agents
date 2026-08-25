@@ -192,6 +192,17 @@
 const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "math", "analyze", "biz"]);
   const VERIFY = "Check the answer once for the most likely error before replying.";
 
+  /* Shaped variants: the domain's own shape sentence is the output contract
+     there, so the scaffold buys thinking and says nothing about form. Stripping
+     the domain shape instead — the previous approach — made the Depth control
+     do literally nothing on every L2/L3 ask, which is the level's whole point. */
+  const SHAPED_SCAFFOLD = {
+    0: null,
+    1: null,
+    2: "Think as long as you need before answering.",
+    3: "Think as long as you need: weigh the real options against my constraints before answering.",
+  };
+
   /* Native variants grant the same thinking without touching the shape of the
      reply. When the user wants the model's own voice, a scaffold may still say
      "this one is worth slowing down for" — it may not say how to answer. */
@@ -206,10 +217,13 @@ const VERIFY_DOMAINS = new Set(["money", "health", "legal", "code", "debug", "ma
     if (mode === "off") return [];
     const level = mode === "force" ? Math.max(metrics.level, 2) : metrics.level;
     const native = style === "native";
-    const table = native ? NATIVE_SCAFFOLD : SCAFFOLD;
+    const table = native ? NATIVE_SCAFFOLD : style === "shaped" ? SHAPED_SCAFFOLD : SCAFFOLD;
     const out = [];
     if (table[level]) out.push({ text: table[level], kind: "reason" });
-    else if (!native && level === 1 && COMPUTE_DOMAINS.has(domId))
+    /* Chain-of-Draft only helps where nothing else has already said how to
+       work. Next to "one line per step" or "no explanation" it is a second,
+       conflicting step format. */
+    else if (!native && level === 1 && COMPUTE_DOMAINS.has(domId) && !metrics.stepShaped)
       out.push({ text: COMPUTE_STEPS, kind: "reason" });
     if (level >= 2 && VERIFY_DOMAINS.has(domId)) out.push({ text: VERIFY, kind: "verify" });
     return out;

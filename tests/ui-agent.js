@@ -96,8 +96,13 @@ const ok = m => console.log('  ok:', m);
   let classesOK = true;
   for (const [q, snippet, cls] of [
     ['migrate my database schema', 'count or checksum', 'data'],
-    ['keep my prs green', "what you'll check, how often", 'ongoing/ops'],
-    ['clean up my downloads folder', 'dry run first', 'files'],
+    /* "keep my prs green" is a standing instruction to FIX things. It used to
+       match the observation class and come back with "report changes, don't act
+       on them" — a contract forbidding the entire job. It belongs to the repo
+       class, whose proof is the tests. */
+    ['keep my prs green', 'paste the output that proves it passes', 'ongoing repo work'],
+    ['monitor my website uptime', "report changes in what you observe", 'pure observation'],
+    ['clean up my downloads folder', 'get my OK before applying it', 'files'],
     ['refactor my codebase', 'paste the output that proves it passes', 'code'],
   ]) {
     await set(q);

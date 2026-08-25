@@ -6,17 +6,33 @@
 <title>Prompt Studio ✦ — type less, get exactly what you want</title>
 <meta name="description" content="Type one letter. Get a surgically specific, succinct prompt. Copy or launch straight into ChatGPT, Claude, Gemini or Perplexity.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prompt Studio">
+<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e141b" media="(prefers-color-scheme: dark)">
 <style>
 :root{
+  /* tells the UA to render carets, scrollbars and native control chrome to
+     match the palette — without it those stay light on a dark page */
+  color-scheme: light dark;
   --bg:#fbfbfa; --panel:#ffffff; --ink:#16222e; --muted:#5f7285; --line:#e4e8ec;
   --accent:#3b6ea5; --accent-ink:#ffffff; --chip:#eef2f6; --chip-on:#3b6ea5; --chip-on-ink:#fff;
   --add:#0a7d51; --shadow:0 10px 30px rgba(22,34,46,.08);
+  /* Accents that carry meaning need a value per palette like everything else.
+     Hard-coded hexes here were legible in light and unreadable in dark. */
+  --warn:#7a5f12; --hot:#8a3a1f; --gold:#8a6a08;
+  /* a boundary you can actually see: control borders need 3:1, card hairlines don't */
+  --line-strong:#7f8e9c;
 }
 @media (prefers-color-scheme:dark){
   :root{
     --bg:#0e141b; --panel:#151d26; --ink:#e8ecf1; --muted:#91a3b5; --line:#243140;
     --accent:#7f9cb8; --accent-ink:#0e141b; --chip:#1d2833; --chip-on:#7f9cb8; --chip-on-ink:#0e141b;
     --add:#5ec99a; --shadow:0 10px 30px rgba(0,0,0,.35);
+    --warn:#e0c15e; --hot:#f0a08a; --gold:#e5be55;
+    --line-strong:#5a6c7e;
   }
 }
 *{box-sizing:border-box}
@@ -35,7 +51,7 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .inputwrap{position:relative}
 #q{
   width:100%; font:inherit; font-size:20px; padding:18px 52px 18px 20px;
-  border:1.5px solid var(--line); border-radius:16px; background:var(--panel); color:var(--ink);
+  border:1.5px solid var(--line-strong); border-radius:16px; background:var(--panel); color:var(--ink);
   outline:none; box-shadow:var(--shadow); transition:border-color .15s;
 }
 #q:focus{border-color:var(--accent)}
@@ -54,10 +70,14 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .s-item{display:flex; align-items:center; gap:10px; padding:10px 16px; cursor:pointer; font-size:15.5px}
 .s-item .em{width:22px; text-align:center; flex:none}
 .s-item .dl{margin-left:auto; color:var(--muted); font-size:12px; flex:none}
-.s-item.sel,.s-item:hover{background:var(--chip)}
+.s-item:hover{background:var(--chip)}
+/* Which row Enter will take is the highest-stakes indicator in the app, and a
+   pale tint is 1.1:1 against the panel — invisible to anyone with low vision.
+   The accent bar carries it instead; the tint stays as ornament. */
+.s-item.sel{background:var(--chip); box-shadow:inset 3px 0 0 var(--accent)}
 .s-item b{font-weight:650}
-.s-item.s-gold .em{color:#d4a017}
-.s-item.s-gold .dl{color:#d4a017; font-weight:650}
+.s-item.s-gold .em{color:var(--gold)}
+.s-item.s-gold .dl{color:var(--gold); font-weight:650}
 
 /* ---- inline completion: the rest of the top suggestion, shown in place ---- */
 #ghost{
@@ -74,7 +94,7 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .step{
   display:inline-flex; align-items:center; gap:7px; max-width:290px;
   border:1px solid var(--line); background:var(--panel); color:var(--ink);
-  border-radius:999px; padding:5px 6px 5px 11px; font-size:13px;
+  border-radius:999px; padding:4px 4px 4px 11px; font-size:13px;
 }
 .step .n{
   flex:none; width:17px; height:17px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
@@ -83,7 +103,8 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .step .t{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .step .x{
   flex:none; border:none; background:none; color:var(--muted); cursor:pointer;
-  font:inherit; font-size:15px; line-height:1; padding:0 3px; border-radius:50%;
+  font:inherit; font-size:15px; line-height:1; border-radius:50%;
+  width:24px; height:24px; padding:0; display:grid; place-items:center;
 }
 .step .x:hover{color:var(--ink)}
 .steparrow{color:var(--muted); font-size:12px}
@@ -95,7 +116,7 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
   border:1px solid var(--line); border-radius:14px; background:var(--panel);
 }
 .axis-y{display:flex; flex-direction:column; align-items:center; gap:4px; flex:none; transition:opacity .15s}
-.axis-y.locked{opacity:.32}
+.axis-y.locked{opacity:.55}
 .vrange{
   -webkit-appearance:slider-vertical; appearance:slider-vertical;
   writing-mode:vertical-lr; direction:rtl;
@@ -114,7 +135,7 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .row{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; align-items:center}
 .rowlabel{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; width:100%; margin-top:14px}
 .chip{
-  border:1px solid var(--line); background:var(--chip); color:var(--ink);
+  border:1px solid var(--line-strong); background:var(--chip); color:var(--ink);
   padding:6px 13px; border-radius:999px; font:inherit; font-size:13.5px; cursor:pointer;
   transition:transform .05s, background .12s;
 }
@@ -126,7 +147,11 @@ h1{font-size:24px; letter-spacing:-.02em; margin:0}
 .slider{flex:1; min-width:220px}
 .slider label{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:4px}
 .slider label output{color:var(--ink); font-weight:600}
+/* The track stays thin; the target it responds to does not. Scoped away from
+   the vertical axis, which sets its own height — and whose class selector
+   loses to this one on specificity. */
 input[type=range]{width:100%; accent-color:var(--accent)}
+input[type=range]:not(.vrange){height:24px}
 .drillwrap{min-width:132px; flex:0 1 auto}
 .tunebtn{
   margin-top:18px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
@@ -137,13 +162,15 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 #tune.open{display:flex}
 #examples .exlabel{font-size:12px; color:var(--muted); align-self:center}
 .switch{
-  display:block; width:44px; height:24px; border-radius:999px; border:1px solid var(--line);
+  display:block; width:44px; height:24px; border-radius:999px; border:1px solid var(--muted);
   background:var(--chip); cursor:pointer; position:relative; padding:0; transition:background .15s;
 }
 .switch::after{
   content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
   background:var(--panel); box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s;
 }
+/* a pale knob on a pale track on a pale page is three invisibles in a row */
+.switch:not(.on)::after{background:var(--muted)}
 .switch.on{background:var(--accent); border-color:var(--accent)}
 .switch.on::after{left:22px}
 .learnnote{font-size:11px; color:var(--muted); margin-top:6px; max-width:230px}
@@ -161,7 +188,15 @@ input[type=range]{width:100%; accent-color:var(--accent)}
   padding:20px; font-size:16.5px; line-height:1.65; min-height:76px; white-space:pre-wrap; word-break:break-word;
 }
 #prompt .adds{color:var(--add)}
-#prompt .seg{cursor:pointer; border-radius:4px}
+/* Every editable piece of the prompt is a real button. It was a span with a
+   click handler, which meant five of the prompt's controls — the constraint
+   guard, the goal line, a precondition, a graph finding, a chain link — could
+   only be removed with a mouse, and had no keyboard path at all. */
+#prompt .seg{
+  cursor:pointer; border-radius:4px;
+}
+/* a focus ring the span would not get on its own */
+#prompt .seg:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 #prompt .seg:hover{background:var(--chip); text-decoration:underline dashed; text-underline-offset:3px}
 #prompt.empty{color:var(--muted)}
 .actions{
@@ -170,7 +205,7 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 }
 .btn{
   font:inherit; font-size:14.5px; font-weight:650; cursor:pointer; border-radius:11px;
-  padding:10px 18px; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+  padding:10px 18px; border:1px solid var(--line-strong); background:var(--panel); color:var(--ink);
   transition:transform .05s;
 }
 .btn:active{transform:scale(.97)}
@@ -180,19 +215,19 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 .count{font-size:12px; color:var(--muted); width:100%; padding:0 16px 10px; text-align:right}
 .modebtn{
   font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:4px 12px;
-  border-radius:999px; border:1px solid var(--line); background:var(--chip); color:var(--ink);
+  border-radius:999px; border:1px solid var(--line-strong); background:var(--chip); color:var(--ink);
 }
 .metrics{
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   padding:10px 16px 0; font-size:12px; color:var(--muted);
 }
 .cx{
-  border:1px solid var(--line); border-radius:999px; padding:2px 10px; cursor:pointer;
+  border:1px solid var(--line-strong); border-radius:999px; padding:5px 12px; cursor:pointer;
   font-weight:650; color:var(--ink); background:var(--chip);
 }
 .want{border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-weight:650; color:var(--ink)}
-.cx[data-l="2"]{color:#8a6d1f; border-color:#d9c48a}
-.cx[data-l="3"]{color:#8a3a1f; border-color:#e0b09a}
+.cx[data-l="2"]{color:var(--warn); border-color:var(--warn)}
+.cx[data-l="3"]{color:var(--hot); border-color:var(--hot)}
 #graph{width:100%; padding:4px 16px 0; display:none}
 #graph.open{display:block}
 #graph text{font-size:9px; fill:var(--muted)}
@@ -218,6 +253,21 @@ main:not(.live) .pad,
 main:not(.live) #chips,
 main:not(.live) #tunebtn,
 main:not(.live) #tune{display:none}
+
+/* text for assistive technology only: present in the accessibility tree,
+   absent from the page. clip-path rather than display:none, which would
+   remove it from the tree as well. */
+.visually-hidden{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;
+}
+
+/* Nothing here loops or parallaxes, but a preference stated is a preference
+   honoured — and the toast has to be pinned in place once its slide is gone. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:.01ms !important; animation-duration:.01ms !important}
+  #toast{transform:translate(-50%,0)}
+}
 
 @media (max-width:640px){
   main{padding:26px 16px 60px}
@@ -247,17 +297,20 @@ main:not(.live) #tune{display:none}
   <div id="chainstrip"></div>
 
   <div class="inputwrap">
+    <label for="q" class="visually-hidden">What do you need?</label>
     <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+           role="combobox" aria-autocomplete="list" aria-controls="sug" aria-expanded="false"
            placeholder="explain machine learning · fix my resume · trip to japan…" autofocus>
     <div id="ghost" aria-hidden="true"></div>
     <span class="kbd">↵ copies</span>
-    <div id="sug" role="listbox"></div>
+    <div id="sug" role="listbox" aria-label="Suggestions"></div>
   </div>
 
   <div class="row" id="examples"></div>
 
   <div id="card">
-    <div id="prompt" class="empty"></div>
+    <div id="prompt" class="empty" role="region" aria-label="Your prompt" tabindex="-1"></div>
+    <p id="promptStatus" role="status" aria-live="polite" class="visually-hidden"></p>
     <div class="metrics" id="metrics"></div>
     <div id="graph"></div>
     <div class="count" id="count"></div>
@@ -273,6 +326,7 @@ main:not(.live) #tune{display:none}
     <div class="axis-y" id="depthWrap">
       <input type="range" id="depth" class="vrange" min="0" max="2" step="1" value="1" aria-label="Depth">
       <span class="axname">Depth<output id="depthOut">Standard</output></span>
+      <span id="depthlock" class="visually-hidden">Locked: Native leaves the length to the model. Move Steer right to unlock.</span>
     </div>
     <div class="axis-x">
       <div class="padread"><output id="steerOut">Guided</output><span id="steerHint">say what I want</span></div>
@@ -286,40 +340,41 @@ main:not(.live) #tune{display:none}
   <button id="tunebtn" class="tunebtn" type="button" aria-expanded="false">Fine-tune ▸</button>
   <div class="sliders" id="tune">
     <div class="slider">
-      <label><span>Audience</span><output id="toneOut">Anyone</output></label>
-      <input type="range" id="tone" min="0" max="2" step="1" value="1">
+      <label for="tone"><span>Audience</span><output id="toneOut">Anyone</output></label>
+      <input type="range" id="tone" min="0" max="2" step="1" value="1" aria-label="Audience">
     </div>
     <div class="slider drillwrap">
       <label><span>Go-deeper menu</span><output id="drillOut">On</output></label>
-      <button id="drill" class="switch on" type="button" aria-pressed="true"
+      <button id="drill" class="switch on" type="button" aria-pressed="true" aria-label="Go-deeper menu"
               title="Tight answer first, then 3 numbered drill-downs you pick from"></button>
     </div>
     <div class="slider drillwrap">
       <label><span>Reasoning</span><output id="reasonOut">when earned</output></label>
-      <button id="reason" class="modebtn" type="button"
+      <button id="reason" class="modebtn" type="button" aria-label="Reasoning"
               title="Auto: spend reasoning only when the ask is structurally complex. Always: force it. Off: never.">Auto</button>
     </div>
     <div class="slider drillwrap">
       <label><span>Learns from me</span><output id="learnOut">On</output></label>
-      <button id="learn" class="switch on" type="button" aria-pressed="true"
+      <button id="learn" class="switch on" type="button" aria-pressed="true" aria-label="Learns from me"
               title="Ranks suggestions by what you actually use. Stored in this browser only — never sent anywhere."></button>
       <div class="learnnote" id="learnnote"></div>
     </div>
   </div>
 
-  <footer>Free, private, nothing leaves your browser. <span id="vocabnote"></span>
+  <footer>Free, private, nothing leaves your browser. Works offline — add it to your home screen.
+    <span id="vocabnote"></span>
     · <a href="goodhart.html">Goodhart's Law, interactive</a></footer>
 </main>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Bump ?v= on every release so browsers and the Pages CDN drop stale copies. -->
-<script src="data.js?v=20"></script>
-<script src="graph.js?v=20"></script>
-<script src="bridge.js?v=20"></script>
-<script src="reason.js?v=20"></script>
-<script src="intent.js?v=20"></script>
-<script src="chain.js?v=20"></script>
-<script src="profile.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="data.js?v=21"></script>
+<script src="graph.js?v=21"></script>
+<script src="bridge.js?v=21"></script>
+<script src="reason.js?v=21"></script>
+<script src="intent.js?v=21"></script>
+<script src="chain.js?v=21"></script>
+<script src="profile.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
