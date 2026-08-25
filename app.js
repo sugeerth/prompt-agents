@@ -6,7 +6,7 @@
    Shapes are answer-shape-first and always end with an explicit size cap — that's what keeps replies short. */
 
 const GENERIC_SHAPES = [
-  "Just the short version — the single best answer in 2–3 sentences.",
+  "The short version only — no preamble, no caveats.",
   null, // domain provides its own standard shape
   null, // derived: standard + one level deeper
 ];
@@ -116,7 +116,9 @@ const DOMAINS = {
 /* free-typing fallback: keyword → domain, checked in order */
 const SIGS = [
   ["debug",   /\b(error|bug|traceback|exception|not working|fails?|crash|undefined|stack ?trace)\b/i],
-  ["code",    /\b(code|function|script|python|javascript|typescript|sql|regex|api|refactor|algorithm|component)\b/i],
+  // "script" alone matches "ask for a raise script", which is words to say,
+  // not a program. It only counts as code with a programming context around it.
+  ["code",    /\b(code|function|python|javascript|typescript|sql|regex|api|refactor|algorithm|component)\b|\b(shell|bash|node|python|build|deploy) script\b|\.(js|py|ts|sh)\b/i],
   ["email",   /\b(email|e-mail|reply to|follow ?up)\b/i],
   ["summarize",/\b(summariz|summary|tl;?dr|key points|recap|condense)/i],
   // explicit arithmetic is a calculation whatever the subject: "18% of 340 plus
@@ -174,6 +176,12 @@ function detectDomain(text) {
   /* A confident hand-off outranks topic keywords: "refactor my codebase" is
      agent work that HAPPENS to be about code, not a request for code. */
   if (r && r.id === "delegate" && r.confidence >= 0.5) return "agent";
+  /* "fix all failing tests in my repo" is the same hand-off wearing a fix verb:
+     the object is your own infrastructure, so it is work to be done, not a
+     diagnosis to be explained. */
+  if (r && r.id === "fix" && r.confidence >= 0.5 &&
+      /\b(my|our) (repo|repos|codebase|tests?|build|pipeline|ci|deploys?|servers?)\b/i.test(text))
+    return "agent";
   for (const [id, re] of SIGS) {
     if (!re.test(text)) continue;
     /* "review my resume" and "fix my resume" are the same request — judge a
@@ -193,13 +201,16 @@ const STRIPS = {
   code:      /^(write\s+)?code\s+(for|to)\s+/i,
   debug:     /^(help me\s+)?fix(ing)?\s+/i,
   write:     /^(write|draft)\s+(me\s+)?/i,
-  email:     /^write\s+/i,
+  email:     /^(write\s+)?(an?\s+)?e-?mails?\s+/i,
   summarize: /^summariz(e|ing)\s+/i,
   decide:    /^(help me\s+)?(decide|choose)\s+(between\s+)?/i,
   cook:      /^(recipe\s+for|how to (cook|make))\s+/i,
-  travel:    /^(plan\s+)?(a\s+|my\s+)?trip\s+(to\s+)?/i,
+  travel:    /^(plan\s+)?(a\s+|my\s+)?(road\s+)?trip\s+(to\s+)?/i,
   plan:      /^(help me\s+)?plan(ning)?\s+/i,
   math:      /^(solve|calculate)\s+/i,
+  analyze:   /^analy[sz]e\s+/i,
+  biz:       /^business\s+(?=plan|idea)/i,
+  social:    /^what (to|should i) say\s+/i,
   image:     /^(image|picture|logo)\s+of\s+/i,
 };
 
@@ -209,6 +220,8 @@ const STRIPS = {
 const NEEDS = {
   local: "Ask where I am first if it changes the answer.",
   summarize: "Work only from the text I paste below.",
+  // without this, Native returns a description of a logo rather than a prompt for one
+  image: "Write this as one image-generation prompt.",
 };
 
 /* Delegated work is not one thing. Each class of task has its own real proof
@@ -219,7 +232,12 @@ const NEEDS = {
 const AGENT_CLASSES = [
   { sig: /\b(database|db|schema|migrations?|migrate|tables?|records|dataset)\b/i,
     line: "Back up first. Verify each step with a count or checksum; never drop data without asking." },
+  /* Only a PURE observation task. "keep my prs green" is a standing
+     instruction to fix things, and telling that agent to observe and not act
+     forbids the entire job — the app's own gold prompt for the same query says
+     to apply the fixes. */
   { sig: /\b(keep|watch|monitor(ing)?|alerts?|logs?|uptime|green)\b/i,
+    not: /\b(fix|repair|resolve|merge|deploy|apply|update|prs?|repo|codebase|tests?|build|pipeline)\b/i,
     line: "This is ongoing: say what you'll check, how often, and what triggers action — then verify the first check live." },
   { sig: /\b(files?|folders?|inbox|photos|downloads|organi[sz]e|rename|clean ?up)\b/i,
     line: "Dry run first: list what would change and wait for my OK before changing anything." },
@@ -234,7 +252,7 @@ const AGENT_CLASSES = [
 ];
 function agentNeed(domId, t) {
   if (domId !== "agent") return null;
-  for (const c of AGENT_CLASSES) if (c.sig.test(t)) return c.line;
+  for (const c of AGENT_CLASSES) if (c.sig.test(t) && !(c.not && c.not.test(t))) return c.line;
   return null;
 }
 
@@ -249,12 +267,13 @@ const AGENT_BRIEF = [
     verify: "run the count/checksum before and after; paste both",
     rule: "back up first; never drop data without asking" },
   { sig: /\b(keep|watch|monitor(ing)?|alerts?|logs?|uptime|green)\b/i,
+    not: /\b(fix|repair|resolve|merge|deploy|apply|update|prs?|repo|codebase|tests?|build|pipeline)\b/i,
     done: "the first check has run live and you've shown me its output",
-    verify: "say what you'll check, how often, and what triggers action; verify the first check live",
+    verify: "run the first check live and paste its output",
     rule: "report changes in what you observe, don't act on them without asking" },
   { sig: /\b(files?|folders?|inbox|photos|downloads|organi[sz]e|rename|clean ?up)\b/i,
     done: "the approved dry-run list has been applied, nothing else",
-    verify: "dry run first: list what would change and wait for my OK",
+    verify: "show me the list of changes and get my OK before applying it",
     rule: "never delete — move aside instead" },
   { sig: /\b(research|find out|look into|investigate|compare\b.*\b(options|providers|plans))\b/i,
     done: "findings are written up with sources I can check",
@@ -268,6 +287,10 @@ const AGENT_BRIEF = [
     done: "every message is drafted and approved before it goes out",
     verify: "show me each message before sending",
     rule: "never send on my behalf without my OK" },
+  { sig: /\b(report|digest|summary|newsletter|export|sync|backup)\b.*\b(weekly|daily|monthly|automat)|\bautomat\w+\b.*\b(report|digest|export|sync|backup)\b/i,
+    done: "one run has produced the real output and you've shown it to me",
+    verify: "run it once end to end and paste the output",
+    rule: "never send or publish the output without my OK" },
   { sig: /\b(repo|repos|codebase|refactor|ci|cd|tests?|dependenc|deploy|pipeline|prs?|website|app)\b/i,
     done: "the tests pass before and after, with output pasted",
     verify: "paste the output that proves it passes",
@@ -280,7 +303,7 @@ const AGENT_BRIEF_DEFAULT = {
 };
 
 function buildBrief(t, depth, activeMods, drill) {
-  const cls = AGENT_BRIEF.find(c => c.sig.test(t)) || AGENT_BRIEF_DEFAULT;
+  const cls = AGENT_BRIEF.find(c => c.sig.test(t) && !(c.not && c.not.test(t))) || AGENT_BRIEF_DEFAULT;
 
   /* The brief consumes the reasoning layer. The graph's critical path becomes
      the plan, a discovered cycle becomes a Watch-out, and the complexity
@@ -335,7 +358,15 @@ function shapeFor(dom, depth) {
   if (s) return s;
   if (depth === 0) return GENERIC_SHAPES[0];
   const std = dom.shapes[1];
-  return depth === 2 ? std + " Then go one level deeper on the most important part." : std;
+  if (depth !== 2) return std;
+  /* Deep, derived. Appending "go one level deeper" to a shape that ends in
+     "5 bullets max" asks for more inside a cap that forbids it — so where
+     there is a count, Deep raises it rather than arguing with it. */
+  const raised = std
+    .replace(/\b(\d+) (bullets?|actions?|moves?|tactics?|picks?|points?|ideas?)\b/i,
+             (m, n, u) => `${+n * 2} ${u}`)
+    .replace(/\bMax (\d+) words\b/i, (m, n) => `Max ${Math.round(+n * 2)} words`);
+  return raised !== std ? raised : std + " Then the part people most often get wrong, in detail.";
 }
 
 /* One line that turns every answer into progressive disclosure:
@@ -347,7 +378,9 @@ const DRILL = "Then 3 numbered ways to go deeper.";
    operator three ways to go deeper, and an image prompt has nothing to drill
    into — so those are the two places it stays out of. */
 function effectiveDrill(domId) {
-  return state.drill && domId !== "agent" && domId !== "image" && state.steer !== "native";
+  return state.drill && domId !== "agent" && domId !== "image" && state.steer !== "native" &&
+    // a TL;DR shape says "this and nothing else"; a follow-up menu is more things
+    !(state.steer === "shaped" && state.depth === 0);
 }
 
 /* Build the prompt as typed segments — every piece knows what produced it,
@@ -373,7 +406,8 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   const marker = shape.includes("\n\n[paste text below]");
   const shapeCore = marker ? shape.replace("\n\n[paste text below]", "") : shape;
   segs.push({ text: shapeCore, add: depth !== 1, kind: "shape" });
-  if (depth === 0) segs.push({ text: "No preamble.", add: true, kind: "shape" });
+  if (depth === 0 && !/nothing else|no explanation|no long intros|\bonly\b/i.test(shapeCore))
+    segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
   if (drill) segs.push({ text: DRILL, add: false, kind: "drill" });
@@ -542,9 +576,21 @@ function renderGhost() {
     : "";
 }
 
+/* A listbox nobody is told about is a listbox that does not exist. The input
+   is a combobox: it has to say that it is expanded, which option is active,
+   and each option has to say whether it is the selected one. Without this the
+   app's headline feature — type one letter, get suggestions — is invisible to
+   a screen reader, and Enter silently swaps in something never announced. */
+function syncCombo() {
+  const open = sug.classList.contains("open");
+  q.setAttribute("aria-expanded", String(open));
+  if (open && state.sel >= 0) q.setAttribute("aria-activedescendant", "s-opt-" + state.sel);
+  else q.removeAttribute("aria-activedescendant");
+}
+
 function renderSug() {
   const t = q.value.trim().toLowerCase();
-  if (!state.matches.length) { sug.classList.remove("open"); renderGhost(); return; }
+  if (!state.matches.length) { sug.classList.remove("open"); renderGhost(); syncCombo(); return; }
   sug.innerHTML = state.matches.map((m, i) => {
     const dom = DOMAINS[m.d] || DOMAINS.general;
     const idx = m.t.indexOf(t);
@@ -553,11 +599,12 @@ function renderSug() {
       : m.t;
     const em = m.gold ? "★" : dom.em;
     const dl = m.gold ? "★ tuned" : dom.label;
-    return `<div class="s-item${i === state.sel ? " sel" : ""}${m.gold ? " s-gold" : ""}" data-i="${i}" role="option">
+    return `<div class="s-item${i === state.sel ? " sel" : ""}${m.gold ? " s-gold" : ""}" data-i="${i}" id="s-opt-${i}" role="option" aria-selected="${i === state.sel}">
       <span class="em">${em}</span><span>${label}</span><span class="dl">${dl}</span></div>`;
   }).join("");
   sug.classList.add("open");
   renderGhost();
+  syncCombo();
 }
 
 function accept(i) {
@@ -574,15 +621,21 @@ function accept(i) {
 
 /* ---------- chips ---------- */
 function renderChips() {
-  const domId = state.domain || detectDomain(state.topic || "");
+  const domId = state.topic.trim() ? effectiveDomain() : (state.domain || "general");
   const scored = MODIFIERS.map((m, i) => ({ m, i, rel: m.doms && m.doms.includes(domId) ? 0 : 1 }));
   scored.sort((a, b) => a.rel - b.rel || a.i - b.i);
   const expanded = chipsEl.dataset.more === "1";
-  const shown = expanded ? scored : scored.slice(0, 12);
+  /* A hand-tuned prompt that asks for a seven-row table cannot also answer in
+     three bullets. Chips that name a count are withheld while one is showing
+     rather than silently contradicting it. */
+  const COUNTED = new Set(["bul3", "top3", "w100"]);
+  const filtered = state.gold ? scored.filter(x => !COUNTED.has(x.m.id)) : scored;
+  const shown = expanded ? filtered : filtered.slice(0, 12);
   chipsEl.innerHTML = shown.map(({ m }) =>
-    `<button class="chip${state.mods.has(m.id) ? " on" : ""}" data-id="${m.id}" type="button">${m.label}</button>`
+    `<button class="chip${state.mods.has(m.id) ? " on" : ""}" data-id="${m.id}" type="button" ` +
+    `aria-pressed="${state.mods.has(m.id)}">${m.label}</button>`
   ).join("") +
-  (MODIFIERS.length > 12
+  (filtered.length > 12
     ? `<button class="chip" data-more="1" type="button">${expanded ? "− less" : "+ more"}</button>` : "");
 }
 
@@ -607,7 +660,20 @@ function reasonSegs(domId) {
      scaffold after it would say everything twice. */
   if (domId === "agent") return [];
   const m = REASON.analyze(state.topic);
-  const out = REASON.scaffoldFor(m, domId, state.reason, state.steer === "native" ? "native" : "shaped")
+  /* Chain-of-Draft's five-word steps are a second step format wherever one is
+     already named, so the layer needs to know that before it spends the line. */
+  const dom = DOMAINS[domId];
+  /* Only a shape that will actually ship counts. Guided strips the domain
+     shape, so reading it there would suppress the compute line over a sentence
+     the user never sees. */
+  const shapeNow = (state.steer === "shaped" && dom) ? (shapeFor(dom, state.depth) || "") : "";
+  m.stepShaped = /step by step|one line per step|numbered steps|no explanation|Nothing else/i
+    .test(shapeNow + " " + (state.gold ? state.gold.p : ""));
+  /* Shaped and gold prompts carry their own answer shape, so the scaffold must
+     not carry a second one. */
+  const style = state.steer === "native" ? "native"
+    : (state.steer === "shaped" || state.gold) ? "shaped" : "guided";
+  const out = REASON.scaffoldFor(m, domId, state.reason, style)
     .map(s => ({ text: s.text, add: true, kind: s.kind }));
   /* What the graph found about the problem's structure. Native stays the
      user's own words plus their goal, so structural guidance waits for a
@@ -653,37 +719,60 @@ function intentSegs(domId) {
   if (!INTENT || state.noIntent || !state.topic.trim()) return [];
   const r = INTENT.recognize(state.topic);
   const out = [];
-  if (r.line && r.confidence >= 0.4) {
+  const floor = state.steer === "native" ? 0.25 : 0.4;
+  if (r.line && r.confidence >= floor) {
     /* Native has no domain prefix at all — the base line is the user's own
        words — so nothing is implied there and the goal must still be said. */
     const framed = state.steer !== "native";
     if (!framed || !(INTENT_IMPLIED[r.id] || []).includes(domId))
       out.push({ text: r.line, add: true, kind: "intent" });
   }
-  /* Asking beats guessing — but only where there is genuinely nothing to go
-     on. A well-formed question, or an ask long enough to carry its own
-     context, is not ambiguous just because no cue fired; offering to ask a
-     question there costs 12 words and an extra round trip. A bare topic
-     ("sourdough") is the case this exists for. */
-  else if (r.confidence < 0.22 && !isWellFormed(state.topic))
+  /* Asking beats guessing — but only where there is genuinely nothing to go on.
+     The gate used to test sentence FORM, which fired on a third of all asks:
+     "panic attack" and "tell me a joke" are not ambiguous, they are short. What
+     matters is information content, so it now fires only when the ask carries
+     almost no content words AND no goal was recognized at all. A gold prompt is
+     hand-tuned and a chained step has the previous step for context, so neither
+     needs it either. */
+  else if (isBare(state.topic) && !state.gold && !state.chain.length)
     out.push({ text: INTENT.CLARIFY, add: true, kind: "intent" });
   return out;
 }
 
-const isWellFormed = t => {
-  const x = t.trim();
-  return /\?$/.test(x) || x.split(/\s+/).length >= 5 ||
-    /^(is|are|can|could|do|does|did|should|would|will|am|has|have|what|why|how|when|where|which|who)\b/i.test(x);
+const BARE_STOP = new Set(("a an the my our your this that some for to of in on at and or is are be " +
+  "me i we you it how what why do does can should would help").split(" "));
+const isBare = t => {
+  const content = String(t).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+    .filter(w => w.length > 2 && !BARE_STOP.has(w));
+  const r = INTENT ? INTENT.recognize(t) : null;
+  return content.length <= 1 && (!r || r.confidence === 0);
 };
 
+/* Native is the user's own words, so mangling them is the one thing it must
+   not do: a question turned into a statement, or a bare "i", reads as sloppy
+   in the mode whose entire promise is fidelity. */
 const tidy = t => {
-  const s = t.trim().replace(/\s+/g, " ");
-  return (s.charAt(0).toUpperCase() + s.slice(1)) + (/[.?!]$/.test(s) ? "" : ".");
+  const s = t.trim().replace(/\s+/g, " ").replace(/\bi\b/g, "I");
+  if (/[.?!]$/.test(s)) return s.charAt(0).toUpperCase() + s.slice(1);
+  const asks = /^(is|are|was|were|can|could|do|does|did|should|would|will|am|has|have|what|why|how|when|where|which|who)\b/i.test(s);
+  return s.charAt(0).toUpperCase() + s.slice(1) + (asks ? "?" : ".");
 };
 
 /* ---------- chaining ----------
    The steps already committed, plus the one being typed. Prompts are rebuilt
    from topics rather than stored, so a chain can never hold a stale prompt. */
+/* "write the letter" after "my landlord kept my deposit" is still a legal
+   matter, and "then deploy it" is not a fresh mission briefing — a step that
+   leans on the previous one inherits its framing rather than being re-detected
+   from three words of shorthand. */
+function effectiveDomain() {
+  const own = state.domain || detectDomain(state.topic);
+  if (!CHAIN || !state.chain.length || state.noChain || !state.topic.trim()) return own;
+  const prev = state.chain[state.chain.length - 1];
+  if (prev.domain && CHAIN.leansOnPrevious(state.topic, prev.topic)) return prev.domain;
+  return own;
+}
+
 function chainSteps() {
   return state.chain.concat([{
     topic: state.topic,
@@ -717,8 +806,12 @@ function stepSegs() {
      the way it would answer a person. */
   if (state.steer === "native") {
     if (!state.topic.trim()) return [];
-    const domId = state.domain || detectDomain(state.topic);
+    const domId = effectiveDomain();
     const segs = [{ text: tidy(state.gold ? state.gold.q : state.topic), add: false, kind: "base" }];
+    if (state.gold && !state.noNeed) {
+      const slot = (state.gold.p.match(/<[^>]{3,80}>\s*$/) || [])[0];
+      if (slot) segs.push({ text: slot.trim(), add: true, kind: "need" });
+    }
     if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
     const nClassNeed = agentNeed(domId, state.topic);
     if (nClassNeed && !state.noNeed) segs.push({ text: nClassNeed, add: true, kind: "need" });
@@ -741,7 +834,7 @@ function stepSegs() {
     if (effectiveDrill(g.d)) segs.push({ text: DRILL, add: false, kind: "drill" });
     return segs;
   }
-  const domId = state.domain || detectDomain(state.topic);
+  const domId = effectiveDomain();
   const segs = buildPrompt(state.topic, domId, state.depth, state.tone, active, effectiveDrill(domId));
   if (!segs.length) return segs;
   /* Guided: keep the domain's framing and the follow-up menu, but drop the
@@ -756,17 +849,23 @@ function stepSegs() {
        saying what the answer must look like. */
     if (domId !== "agent" && WANT[state.depth])
       extra.push({ text: WANT[state.depth], add: true, kind: "want" });
-    segs.splice(1, 0, ...intentSegs(domId));
   }
+  /* What the user wants is content, not form, so Shaped keeps it too — the
+     control is described as "also fixes the answer's shape", and "also" has to
+     mean adding a shape rather than dropping the goal. */
+  if (state.steer !== "native") segs.splice(1, 0, ...intentSegs(domId));
   // reasoning goes before the go-deeper menu and the paste marker
   extra.push(...reasonSegs(domId));
   extra.push(...externalSegs());
-  /* Two answer shapes in one prompt is a contradiction the model has to pick a
-     side of. When the reasoning layer has already fixed the output contract,
-     the domain's own shape sentence yields — the scaffold is the more specific
-     instruction, and it was chosen because this ask earned it. The mission
-     brief is exempt: its "shape" segment is the plan, not a shape. */
-  if (domId !== "agent" && extra.some(x => /show only/.test(x.text)))
+  /* Two answer shapes in one prompt is a contradiction, and the fix used to be
+     deleting the domain's shape whenever the scaffold declared one. That made
+     the Depth control do nothing at all on every L2/L3 ask in Shaped — the one
+     level whose entire promise is that it fixes the answer's form. So the
+     scaffold yields instead: in Shaped it buys thinking and says nothing about
+     form (see SHAPED_SCAFFOLD), and the domain shape owns the contract.
+     A gold prompt is hand-tuned and already names its own shape, so it wins on
+     the same principle. */
+  if (state.gold && domId !== "agent")
     for (let i = segs.length - 1; i >= 0; i--) if (segs[i].kind === "shape") segs.splice(i, 1);
   const at = segs.findIndex(s => s.kind === "drill" || s.kind === "marker");
   if (at === -1) segs.push(...extra); else segs.splice(at, 0, ...extra);
@@ -803,13 +902,14 @@ function syncExamples() {
 
 function update() {
   syncExamples();
-  if (state.topic.trim()) applyRemembered(state.domain || detectDomain(state.topic));
+  if (state.topic.trim()) applyRemembered(effectiveDomain());
   const segs = currentSegs();
   if (!segs.length) {
     // no prompt means nothing to report on — pills describing an empty ask are
     // the app analysing something the user cannot see
     metricsEl.innerHTML = "";
     graphEl.classList.remove("open");
+    announce("");
     promptEl.className = "empty";
     /* Says something the subtitle above doesn't: what to DO with the prompt
        once it's here. Two restatements of the same promise on one screen is
@@ -822,17 +922,39 @@ function update() {
   promptEl.innerHTML = segs.map((s, i) => {
     const hint = SEG_HINTS[s.kind];
     const cls = (s.add ? "adds" : "") + (hint ? " seg" : "");
-    const attrs = hint ? ` data-i="${i}" title="${hint}"` : "";
     let body = s.text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
     if (s.label) {
       const at = body.indexOf(s.label + ":");
       if (at >= 0) body = body.slice(0, at) + "<b>" + s.label + ":</b>" + body.slice(at + s.label.length + 1);
     }
-    return `<span class="${cls.trim()}"${attrs}>${body}</span>`;
+    /* Focusable spans rather than buttons, deliberately. A button is an atomic
+       inline box — the browser coerces display:inline back to inline-block — so
+       each piece would claim its own line and the prompt would read as a list
+       of directives instead of the paragraph that actually gets copied. A span
+       with a button role, a tab stop and Enter/Space handling is operable the
+       same way and flows as prose. */
+    return hint
+      ? `<span class="${cls.trim()}" data-i="${i}" role="button" tabindex="0" title="${hint}">${body}</span>`
+      : `<span class="${cls.trim()}">${body}</span>`;
   }).join(" ");
   const text = segsToText(segs);
-  countEl.textContent = text.split(/\s+/).length + " words";
+  const words = text.split(/\s+/).length;
+  countEl.textContent = words + " words";
+  announce(`Prompt ready, ${words} words` +
+    (state.chain.length ? `, step ${state.chain.length + 1} of the chain` : "") + ".");
   renderMetrics();
+}
+
+/* Typing rebuilds the prompt on every keystroke and, on the first one, reveals
+   a whole row of controls. A live region on the prompt itself would re-read
+   the lot on every letter, so the announcement is debounced and summarised:
+   one sentence, once the typing stops. */
+let announceTimer = null;
+function announce(msg) {
+  const el = document.getElementById("promptStatus");
+  if (!el) return;
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => { el.textContent = msg; }, 700);
 }
 
 /* ---------- reasoning readout: the graph the layer actually measured ---------- */
@@ -842,7 +964,7 @@ function renderMetrics() {
   if (!REASON || !state.topic.trim()) { metricsEl.innerHTML = ""; graphEl.classList.remove("open"); return; }
   const m = REASON.analyze(state.topic);
   const spent = state.reason === "off" ? "no reasoning spent"
-    : REASON.scaffoldFor(m, state.domain || detectDomain(state.topic), state.reason).length
+    : REASON.scaffoldFor(m, effectiveDomain(), state.reason).length
       ? "reasoning spent" : "no reasoning needed";
   const r = INTENT ? INTENT.recognize(state.topic) : null;
   const wants = r && r.confidence >= 0.4
@@ -851,7 +973,8 @@ function renderMetrics() {
   /* three plain pills; the graph detail (topics, constraints, node counts)
      waits behind the badge for whoever actually wants it */
   metricsEl.innerHTML = wants +
-    `<button class="cx" data-l="${m.level}" type="button" title="How complex this ask is — click to see why">` +
+    `<button class="cx" data-l="${m.level}" type="button" aria-expanded="${!!state.graphOpen}" ` +
+    `aria-controls="graph" title="How complex this ask is — click to see why">` +
     `L${m.level} ${REASON.LEVEL_NAME[m.level]}</button>` +
     `<span>${spent}</span>`;
   if (state.graphOpen) drawGraph(m); else graphEl.classList.remove("open");
@@ -870,9 +993,12 @@ function drawGraph(m) {
   const ents = m.entities.slice(0, 6);
   const parts = [];
   const g = m.graph;
-  parts.push(`<div style="font-size:12px;color:var(--muted);padding-bottom:2px">${m.why}` +
+  /* The summary line is the picture's real alternative — it is the finding the
+     drawing illustrates. Naming the image "intent graph" described the file
+     type rather than the content. */
+  parts.push(`<div id="graphwhy" style="font-size:12px;color:var(--muted);padding-bottom:2px">${m.why}` +
     (g ? ` · ${g.n} ${g.n === 1 ? "node" : "nodes"}, ${g.m} ${g.m === 1 ? "link" : "links"}` : "") + `</div>`);
-  parts.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="intent graph">`);
+  parts.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-labelledby="graphwhy">`);
   const R = 52;
   ents.forEach((word, i) => {
     const a = (i / Math.max(ents.length, 1)) * Math.PI * 2 - Math.PI / 2;
@@ -895,15 +1021,24 @@ function drawGraph(m) {
   graphEl.classList.add("open");
 }
 
-/* the prompt itself is the control surface: click a piece to edit it */
+/* the prompt itself is the control surface: click a piece — or focus it and
+   press Enter — to edit it */
+promptEl.addEventListener("keydown", e => {
+  if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+  const span = e.target.closest(".seg");
+  if (!span) return;
+  e.preventDefault();
+  span.click();
+});
+
 promptEl.addEventListener("click", e => {
   const span = e.target.closest(".seg");
   if (!span) return;
   const seg = currentSegs()[+span.dataset.i];
   if (!seg) return;
   if (seg.kind === "mod") { state.mods.delete(seg.modId); renderChips(); }
-  else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; $("toneOut").textContent = toneLabels[1]; }
-  else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); $("depthOut").textContent = depthLabels[state.depth]; }
+  else if (seg.kind === "aud") { state.tone = 1; $("tone").value = "1"; syncToneUI(); }
+  else if (seg.kind === "shape") { state.depth = (state.depth + 1) % 3; $("depth").value = String(state.depth); syncDepthUI(); }
   else if (seg.kind === "multi") state.noMulti = true;
   else if (seg.kind === "intent") state.noIntent = true;
   else if (seg.kind === "need") state.noNeed = true;
@@ -911,9 +1046,7 @@ promptEl.addEventListener("click", e => {
   else if (seg.kind === "reason" || seg.kind === "verify") { state.reason = "off"; syncReasonUI(); }
   else if (seg.kind === "drill") { state.drill = false; syncDrillUI(); }
   else if (seg.kind === "chain") state.noChain = true;
-  else if (seg.kind === "want") {
-    state.depth = 1; $("depth").value = "1"; $("depthOut").textContent = depthLabels[1];
-  }
+  else if (seg.kind === "want") { state.depth = 1; $("depth").value = "1"; syncDepthUI(); }
   update();
 });
 
@@ -994,6 +1127,7 @@ function addStep() {
     topic: state.topic,
     prompt: segsToText(segs),
     constraints: CHAIN.constraints(state.topic),
+    domain: effectiveDomain(),
   });
   q.value = ""; state.topic = ""; state.domain = null; state.gold = null;
   state.matches = []; state.sel = -1; state.noChain = false;
@@ -1080,6 +1214,14 @@ q.addEventListener("keydown", e => {
     else copyPrompt();
   }
   else if (e.key === "Escape") { state.matches = []; renderSug(); }
+  /* Reopen what Escape closed. Without this the only way back to the
+     suggestions is to edit the text, which is a dead end for a keyboard user. */
+  else if (e.key === "ArrowDown" && !open && q.value.trim()) {
+    e.preventDefault();
+    state.matches = findMatches(q.value);
+    state.sel = state.matches.length ? 0 : -1;
+    renderSug();
+  }
 });
 
 sug.addEventListener("mousedown", e => {
@@ -1094,11 +1236,20 @@ document.addEventListener("click", e => {
 /* ---------- sliders ---------- */
 const depthLabels = ["TL;DR", "Standard", "Deep"];
 const toneLabels = ["Beginner", "Anyone", "Expert"];
+function syncDepthUI() {
+  $("depth").setAttribute("aria-valuetext", depthLabels[state.depth]);
+  $("depthOut").textContent = depthLabels[state.depth];
+}
+function syncToneUI() {
+  $("tone").setAttribute("aria-valuetext", toneLabels[state.tone]);
+  $("toneOut").textContent = toneLabels[state.tone];
+}
 $("depth").addEventListener("input", e => {
   state.depth = +e.target.value; state.padTouched = true;
-  $("depthOut").textContent = depthLabels[state.depth]; update();
+  syncDepthUI(); update();
 });
-$("tone").addEventListener("input", e => { state.tone = +e.target.value; $("toneOut").textContent = toneLabels[state.tone]; update(); });
+$("tone").addEventListener("input", e => { state.tone = +e.target.value; syncToneUI(); update(); });
+syncDepthUI(); syncToneUI();
 
 /* details-on-demand toggle */
 function syncDrillUI() {
@@ -1125,6 +1276,8 @@ const STEER_HINT = {
 function syncSteerUI() {
   const i = STEER_MODES.indexOf(state.steer);
   $("steer").value = String(i);
+  /* Arrowing this control should say "Shaped", not "2". */
+  $("steer").setAttribute("aria-valuetext", STEER_LABEL[state.steer]);
   $("steerOut").textContent = STEER_LABEL[state.steer];
   $("steerHint").textContent = STEER_HINT[state.steer];
   /* Native hands length to the model entirely, so the vertical axis has
@@ -1136,6 +1289,10 @@ function syncSteerUI() {
   $("depthWrap").title = locked
     ? "Native leaves the length to the model — slide Steer right to ask for more or less"
     : "How much of the answer you want";
+  /* A dimmed, disabled control with the reason in a tooltip tells a
+     screen-reader user nothing at all about why it stopped working. */
+  if (locked) $("depth").setAttribute("aria-describedby", "depthlock");
+  else $("depth").removeAttribute("aria-describedby");
   // the follow-up menu is also a shape, so Native has no use for it
   $("drill").disabled = state.steer === "native";
   $("drill").style.opacity = state.steer === "native" ? ".4" : "";
@@ -1193,7 +1350,7 @@ function applyRemembered(domId) {
   if (typeof p.depth === "number" && p.depth >= 0 && p.depth <= 2) {
     state.depth = p.depth;
     $("depth").value = String(p.depth);
-    $("depthOut").textContent = depthLabels[p.depth];
+    syncDepthUI();
   }
 }
 
@@ -1290,7 +1447,8 @@ function rebuildStep(topic) {
   state.topic = topic; state.domain = null; state.gold = null;
   const prompt = segsToText(stepSegs());
   state.topic = held.topic; state.domain = held.domain; state.gold = held.gold;
-  return { topic, prompt, constraints: CHAIN ? CHAIN.constraints(topic) : [] };
+  return { topic, prompt, domain: detectDomain(topic),
+           constraints: CHAIN ? CHAIN.constraints(topic) : [] };
 }
 
 function applyHash() {

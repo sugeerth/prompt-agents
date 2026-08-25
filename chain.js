@@ -79,24 +79,34 @@
     const n = i; // steps are 0-based, humans count from 1
     const out = [];
 
-    if (leansOnPrevious(me && me.topic, prev.topic))
-      out.push({ text: `Step ${n} asked: ${condense(prev.topic)}.`, kind: "chain" });
+    /* Which step this leans on. By step 3 the honest answer is usually "the
+       first one" — "what will it cost" builds on the itinerary, not on the
+       packing list — so naming the immediate predecessor actively misdirects. */
+    if (leansOnPrevious(me && me.topic, prev.topic)) {
+      out.push({ text: n >= 2
+        ? `Steps 1–${n} covered: ${condense(steps[0].topic, 70)}, then ${condense(prev.topic, 50)}.`
+        : `Step ${n} asked: ${condense(prev.topic)}.`, kind: "chain" });
+    }
 
     out.push({
-      text: `This continues from your answer to step ${n} — build on it, don't repeat it.`,
+      text: n >= 2
+        ? `This continues from steps 1–${n} — build on them, don't repeat them.`
+        : `This continues from your answer to step ${n} — build on it, don't repeat it.`,
       kind: "chain",
     });
 
     /* Constraints are the thing people most expect to survive a follow-up and
        are most surprised to lose. "On a tight budget" was said once, in step 1,
-       and it still governs step 3. Carried only when the new step doesn't
-       restate them itself, so the prompt never says the same thing twice. */
-    if (prev.constraints && prev.constraints.length) {
-      const restated = words(me && me.topic);
-      const live = prev.constraints.filter(c => !restated.some(w => c.includes(w)));
-      if (live.length)
-        out.push({ text: `The constraints still apply: ${live.slice(0, 3).join(", ")}.`, kind: "chain" });
-    }
+       and it still governs step 3 — so every earlier step's constraints stay in
+       force, not just the previous one's. Carried only when the new step
+       doesn't restate them itself, so the prompt never says one thing twice. */
+    const restated = words(me && me.topic);
+    const inherited = [];
+    for (let k = 0; k < i; k++)
+      for (const c of (steps[k] && steps[k].constraints) || [])
+        if (!inherited.includes(c) && !restated.some(w => c.includes(w))) inherited.push(c);
+    if (inherited.length)
+      out.push({ text: `The constraints still apply: ${inherited.slice(0, 3).join(", ")}.`, kind: "chain" });
     return out;
   }
 
@@ -141,7 +151,13 @@
     const live = (steps || []).filter(s => s && s.prompt);
     if (!live.length) return "";
     if (live.length === 1) return live[0].prompt;
-    const body = live.map((s, i) => `${i + 1}) ${s.prompt}`).join("\n\n");
+    /* Each step still carries its own go-deeper menu, which the closing
+       instruction below immediately contradicts — a three-step chain would ask
+       for nine drill-down menus and then say to summarise each step in one
+       line. The pipeline's own contract governs. */
+    const body = live
+      .map((s, i) => `${i + 1}) ${s.prompt.replace(/\s*Then 3 numbered ways to go deeper\.?/g, "").trim()}`)
+      .join("\n\n");
     return "Do these in order, using each result in the next.\n\n" + body +
       "\n\nGive me the final result. Summarize the intermediate steps in one line each, " +
       "and stop to ask if any step's result would change the ones after it.";
