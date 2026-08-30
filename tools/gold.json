@@ -573,5 +573,95 @@
 "q": "fix the failing build",
 "d": "agent",
 "p": "Fix the failing build: read the CI logs, reproduce locally, find the actual cause rather than the first error printed, apply the smallest fix, and rerun until green. If the failure is flaky or environmental, say so instead of patching over it. Report the cause and the change."
+},
+{
+"q": "read this receipt",
+"d": "vision",
+"p": "Transcribe the receipt into a table — item, quantity, price — then subtotal, tax and total exactly as printed, not recomputed. Anything blurred, folded or cut off is [unclear], never a guess. End with the lines you could not read, 5 at most. <attach the receipt>"
+},
+{
+"q": "read my handwriting",
+"d": "vision",
+"p": "Transcribe the handwriting as written, keeping line breaks and spelling. Where a word is genuinely ambiguous give your best reading in brackets with one alternative; where it is unreadable write [unclear] rather than inventing a plausible word. Then list the ambiguous words, 8 at most. <attach the page>"
+},
+{
+"q": "what does this error say",
+"d": "vision",
+"p": "Quote the error out of the image verbatim first — message, code, file path — marking any truncated part as [unclear]. Then the single most likely cause, the smallest fix, and how to confirm it. Ask for the surrounding log lines if what is visible is not enough. Max 120 words. <attach the screenshot>"
+},
+{
+"q": "what is this plant",
+"d": "vision",
+"p": "Most likely species, then two features actually visible that support it — leaf shape, edge, arrangement — and your real confidence. Add 2 lookalikes and the detail that separates them. If flowers, fruit or the whole plant are out of frame, say what you would need instead of guessing. Max 120 words. <attach the photo>"
+},
+{
+"q": "what is this bug",
+"d": "vision",
+"p": "Most likely species with two visible features behind it, then your confidence. Name 2 lookalikes and what separates them. Say plainly whether it bites, stings or damages plants. If the image is too small or blurred to judge, say that rather than picking the common answer. Max 120 words. <attach the photo>"
+},
+{
+"q": "what breed is this dog",
+"d": "vision",
+"p": "The 3 likeliest breeds or mixes as a table: breed, the visible features backing it, rough confidence. Mixes are normal — say so rather than forcing one answer. Note what the photo cannot show, such as size or coat texture, that would change the ranking. 3 rows, nothing else. <attach the photo>"
+},
+{
+"q": "what font is this",
+"d": "vision",
+"p": "The 3 closest matches in a table: font, the letterforms that identify it (terminals, the g, the a), one free lookalike. Judge only characters actually visible and say which letters you could not see. If it is rendered too small to read the shapes, say so first. Max 3 rows. <attach the image>"
+},
+{
+"q": "explain this chart",
+"d": "vision",
+"p": "What the chart measures and the one finding it actually supports, in 2 sentences. Then 3 bullets of numbers read straight off the axes and labels. Mark any axis, unit or legend you cannot read as [unclear], and name one thing the chart leaves out. Max 120 words. <attach the chart>"
+},
+{
+"q": "alt text for this image",
+"d": "vision",
+"p": "One sentence under 125 characters: subject, action, and only the context a reader needs — no \"image of\". Describe what is visible, never what you infer about mood or story. If the image carries text or data, add a longer description after it, 3 sentences max. <attach the image>"
+},
+{
+"q": "translate this sign",
+"d": "vision",
+"p": "Ask which language I want it in if I have not said. Transcribe the sign exactly, translate it the way it would really be phrased, then a literal gloss so I can check. Anything cropped, obscured or too small to read is [unclear], not filled in. Max 80 words. <attach the photo>"
+},
+{
+"q": "is this mushroom safe to eat",
+"d": "vision",
+"p": "Never call it edible: a photo cannot confirm that. Give the most likely species with the visible features behind it, then the dangerous lookalikes and how they differ. Say plainly that only an expert in person, with spore print and habitat, can confirm an identification. Max 120 words. <attach the photo>"
+},
+{
+"q": "is this mole cancerous",
+"d": "vision",
+"p": "Do not reassure me. Describe only what is visible against ABCDE — asymmetry, border, colour, diameter — and say which of those a photo cannot judge. Then the signs that mean book an urgent appointment. A photo cannot rule anything out; a clinician has to look. Max 120 words. <attach the photo>"
+},
+{
+"q": "is this spider dangerous",
+"d": "vision",
+"p": "Most likely species from the markings actually visible, with the features behind it and your real confidence. Ask where I am if I have not said, then name the dangerous lookalikes there. Identification from a photo is never certain — say so, and say when a bite needs a doctor. Max 100 words. <attach the photo>"
+},
+{
+"q": "what can i cook with this",
+"d": "vision",
+"p": "List only the ingredients you can actually see, then 3 meals from them — one line each: the dish, the staples I would still need, rough time. Do not invent anything that might be hidden behind something else. End with the one purchase that unlocks the most meals. <attach the fridge photo>"
+},
+{
+"q": "critique this photo",
+"d": "vision",
+"p": "Three passes, 3 bullets each: what works, what weakens it ranked by impact, and the single change with the most effect. Judge composition, light, focus and colour from what is visible — no assumptions about my gear or intent. End with one crop or edit to try. Max 150 words. <attach the photo>"
+},
+{
+"q": "is this text a scam",
+"d": "vision",
+"p": "Rate it scam, likely scam, or probably fine, then the evidence in the message itself — sender, links, urgency, payment method, spelling — quoting the exact lines you judged. Say what to check independently, and never to tap a link to verify. Do not call it definitely safe. Max 100 words. <attach the screenshot>"
+},
+{
+"q": "what is this form asking for",
+"d": "vision",
+"p": "Field by field: the field name as printed, what it wants in plain words, one example of a valid answer. Anything cut off or unreadable is [unclear], not a guess. Flag the 2 fields people most often get wrong, and say if this one needs official advice. Max 12 rows. <attach the form>"
+},
+{
+"q": "is this damage serious",
+"d": "vision",
+"p": "Describe only the damage visible — location, size, pattern — then likely or unlikely to be structural, with the reason and your confidence. Name what a photo cannot show: what is behind the surface, and whether it is moving. End with the 3 signs that mean stop and call a professional. <attach the photo>"
 }
 ]

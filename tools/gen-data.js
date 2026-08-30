@@ -1,18 +1,24 @@
-/* Regenerate ../data.js from vocab.json + gold.json.
+/* Regenerate ../data.js from mods.json + vocab.json + gold.json.
    Run:  node tools/gen-data.js   (from anywhere — paths are resolved here)
 
-   data.js is GENERATED. Edit tools/vocab.json or tools/gold.json and rerun;
-   never hand-edit data.js, the next regeneration will overwrite it.
+   data.js is GENERATED. Edit tools/mods.json, tools/vocab.json or
+   tools/gold.json and rerun; never hand-edit data.js, the next regeneration
+   will overwrite it.
 
-   PS_MODS is deliberately NOT sourced from this directory: the one-tap
-   modifier list is lifted verbatim out of the current data.js so regenerating
-   the vocabulary can never perturb it. */
+   PS_MODS used to be lifted verbatim out of the current data.js — which meant
+   the one-tap modifier list had no source of truth at all: the only copy lived
+   in a generated file, and the generator's job was to copy it back onto itself.
+   It is now sourced from mods.json like everything else. The cut-over was made
+   byte-identical (mods.json was seeded from that block and the first
+   regeneration reproduced it exactly), so nothing about the shipped modifier
+   list changed on the way in. */
 
 const fs = require('fs');
 const path = require('path');
 const dir = __dirname;
 const DATA = path.join(dir, '..', 'data.js');
 
+const mods = JSON.parse(fs.readFileSync(path.join(dir, 'mods.json'), 'utf8'));
 const vocab = JSON.parse(fs.readFileSync(path.join(dir, 'vocab.json'), 'utf8'));
 const gold = JSON.parse(fs.readFileSync(path.join(dir, 'gold.json'), 'utf8'));
 
@@ -21,7 +27,8 @@ const gold = JSON.parse(fs.readFileSync(path.join(dir, 'gold.json'), 'utf8'));
 const DOMS = new Set(['learn', 'code', 'debug', 'write', 'email', 'career', 'health', 'cook',
   'travel', 'money', 'fit', 'home', 'parent', 'shop', 'create', 'biz', 'market', 'legal',
   'lang', 'math', 'sci', 'plan', 'social', 'fun', 'tech', 'decide', 'summarize', 'analyze',
-  'image', 'agent', 'local', 'general']);
+  /* `vision` reads a picture the user attached; `image` writes a prompt to make one. */
+  'vision', 'image', 'agent', 'local', 'general']);
 
 /* An entry is what a real person types: lowercase, no sentence punctuation,
    apostrophes and hyphens allowed because "won't" and "x-ray" are how people write. */
@@ -31,6 +38,29 @@ const MAX_GOLD_WORDS = 60;
 const ROLEPLAY = /\b(you are (an?|the) |act as|pretend (to be|you)|imagine you are|as an? (expert|professional|world.class))/i;
 
 const fail = msg => { throw new Error(msg); };
+
+/* ---------- modifiers ---------- */
+/* A chip is a label you can read at a glance and one imperative sentence the
+   app appends verbatim. Politeness padding and role-play belong nowhere, and
+   least of all in a line that is bolted onto every prompt the chip touches. */
+const modIds = new Set();
+for (const m of mods) {
+  if (!m || typeof m.id !== 'string' || typeof m.label !== 'string' || typeof m.text !== 'string')
+    fail('bad modifier entry: ' + JSON.stringify(m));
+  if (!/^[a-z0-9]+$/.test(m.id)) fail('modifier id must be lowercase alphanumeric: ' + m.id);
+  if (modIds.has(m.id)) fail('duplicate modifier id: ' + m.id);
+  modIds.add(m.id);
+  if (m.label.length > 16) fail(`modifier label too long (${m.label.length} chars): ${m.label}`);
+  if (m.text.split(/\s+/).length > 14) fail('modifier text should be one short sentence: ' + m.id);
+  if (ROLEPLAY.test(m.text)) fail('modifier uses a role-play opener: ' + m.id);
+  if (/\bplease\b/i.test(m.text)) fail('modifier uses politeness padding: ' + m.id);
+  if (m.doms !== undefined) {
+    if (!Array.isArray(m.doms) || !m.doms.length) fail('modifier doms must be a non-empty array: ' + m.id);
+    for (const d of m.doms) if (!DOMS.has(d)) fail(`unknown domain "${d}" on modifier: ${m.id}`);
+  }
+  for (const k of Object.keys(m)) if (!['id', 'label', 'text', 'doms'].includes(k))
+    fail(`unknown key "${k}" on modifier: ${m.id}`);
+}
 
 /* ---------- vocabulary ---------- */
 const seen = new Set();
@@ -69,25 +99,31 @@ for (const g of gold) {
 }
 
 /* ---------- floors: a later edit that shrinks the corpus should be loud ---------- */
-if (vocab.length < 850) fail(`vocabulary shrank to ${vocab.length} (floor 850)`);
-if (gold.length < 110) fail(`gold cache shrank to ${gold.length} (floor 110)`);
+if (mods.length < 38) fail(`modifier list shrank to ${mods.length} (floor 38)`);
+if (vocab.length < 970) fail(`vocabulary shrank to ${vocab.length} (floor 970)`);
+if (gold.length < 130) fail(`gold cache shrank to ${gold.length} (floor 130)`);
 
 /* ---------- emit ---------- */
 /* Shortest first: the autocomplete list reads better when the tersest phrasing
    of an ask is what a one-letter query surfaces. */
 vocab.sort((a, b) => a.t.length - b.t.length || a.t.localeCompare(b.t));
 
-const cur = fs.readFileSync(DATA, 'utf8');
-const modsMatch = cur.match(/window\.PS_MODS = ([\s\S]*?);\n\n/);
-if (!modsMatch) fail('PS_MODS block not found in current data.js');
+/* The modifier block is emitted with the same escaping the hand-written one
+   carried, so cutting PS_MODS over to a real source file changed zero bytes of
+   the shipped list. (Only vocab and gold keep literal characters — that is how
+   they were already emitted, and reflowing them would bury a real change in a
+   whole-file diff.) */
+const escapeNonAscii = s => s.replace(/[^\x00-\x7f]/g, c =>
+  '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 
 const out = '/* Prompt Studio data — autocomplete vocabulary, one-tap modifiers, and a\n' +
   '   hand-tuned gold cache of the top real-world LLM queries (researched across\n' +
   '   ChatGPT/Gemini/Claude/Perplexity usage patterns; each prompt pre-reasoned\n' +
   '   for succinct output and served instantly on similarity match).\n\n' +
-  '   GENERATED by tools/gen-data.js from tools/vocab.json + tools/gold.json.\n' +
+  '   GENERATED by tools/gen-data.js from tools/mods.json + tools/vocab.json\n' +
+  '   + tools/gold.json.\n' +
   '   Do not hand-edit — edit those and rerun. */\n\n' +
-  'window.PS_MODS = ' + modsMatch[1] + ';\n\n' +
+  'window.PS_MODS = ' + escapeNonAscii(JSON.stringify(mods, null, 1)) + ';\n\n' +
   'window.PS_VOCAB = [\n' + vocab.map(e => JSON.stringify(e)).join(',\n') + '\n];\n\n' +
   'window.PS_GOLD = [\n' + gold.map(e => JSON.stringify(e)).join(',\n') + '\n];\n';
 

@@ -32,6 +32,12 @@ const ok = m => console.log('  ok:', m);
 const DOMAINS = ['learn', 'code', 'debug', 'write', 'email', 'career', 'health', 'cook',
   'travel', 'money', 'fit', 'home', 'parent', 'shop', 'create', 'biz', 'market', 'legal',
   'lang', 'math', 'sci', 'plan', 'social', 'fun', 'tech', 'decide', 'summarize', 'analyze',
+  /* `vision` was added to the DOMAINS table in app.js alongside `image`, and is
+     its mirror image: `image` writes a prompt that MAKES a picture, `vision`
+     reads one the user attached. Copied here by hand for the same reason as the
+     rest of the list — importing would make this test agree with app.js instead
+     of checking it. */
+  'vision',
   'image', 'agent', 'local', 'general'];
 
 /* Every gold query that existed before the vocabulary expansion. A cached
@@ -57,8 +63,9 @@ const LEGACY_GOLD = ['write an email', 'resignation letter', 'cover letter', 'im
 
 /* Floors, not targets. They exist so a later edit that shrinks the corpus is
    loud rather than silent; raise them when the corpus grows. */
-const VOCAB_FLOOR = 850;
-const GOLD_FLOOR = 110;
+const VOCAB_FLOOR = 970;
+const GOLD_FLOOR = 130;
+const MODS_FLOOR = 38;
 const MAX_GOLD_WORDS = 60;
 
 /* ---- 1. data.js parses and exposes the three tables ---- */

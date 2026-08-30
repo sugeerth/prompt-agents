@@ -14,7 +14,7 @@ is a defect budget rather than a free resource.
 
 ## The first screen is a box
 
-Before you type, the app is a heading, an input, four examples and one sentence
+Before you type, the app is a heading, an input, five examples and one sentence
 explaining what is about to happen. The prompt card's buttons, the axes, the
 modifier chips and Fine-tune are simply not rendered — every one of them is
 meaningless without a topic, and a screenful of dead controls is what makes a
@@ -27,8 +27,8 @@ screen, no scrolling, before the first keystroke.
 ## How it works
 
 - **Type one letter → suggestions.** 886 built-in completions of things real
-  people ask, across 32 life-and-work domains (cooking, money, code, parenting,
-  travel, legal, care work, small-business admin, bureaucracy, accessibility, …)
+  people ask, across 33 life-and-work domains (cooking, money, code, parenting,
+  travel, legal, vision, care work, small-business admin, bureaucracy, …)
   with full a–z coverage and every common two-letter prefix resolved, so the
   first keystroke always helps. Entries are tagged against what the engine
   actually infers, not by feel: a generator audits every entry's domain tag
@@ -63,7 +63,9 @@ screen, no scrolling, before the first keystroke.
   to edit it in place: click a modifier to remove it, click the answer-shape
   sentence to cycle depth, click the audience line to clear it.
 - **One-tap launch.** Copy with ⏎, or open ChatGPT / Claude / Perplexity with the
-  prompt pre-filled (Gemini: copied + opened).
+  prompt pre-filled (Gemini: copied + opened). On a vision ask the launch says
+  plainly that it carries the prompt but not the picture — a link cannot attach
+  a file for you.
 
 ## Steer: how much the prompt is allowed to shape the reply
 
@@ -124,6 +126,46 @@ one-liner to full checkpoints and two-strike stop rules. Agent chips (Plan
 first, Define done, Show proof, Scope guard, Escalate, Clean up) cover the
 top failure modes of long-horizon agents, and six gold prompts ship for the
 most-delegated tasks.
+
+## Vision: asking a model about a picture you have
+
+The `image` domain writes a prompt to **make** a picture. `vision` is the
+opposite — reading, identifying, transcribing or judging a picture you attach,
+which is what a vision-language model is actually for. Read a receipt, identify
+a plant, explain a chart, transcribe handwriting, work out what an error
+screenshot says, critique a photo, get alt text.
+
+Every vision prompt carries one line that matters more than the rest:
+
+> Work only from the image — if something isn't visible in it, say so instead of guessing.
+
+A VLM's characteristic failure is not refusing. It is describing something
+plausible that is not in the picture, confidently. That line is the single
+biggest improvement available to a vision prompt, so it is a *precondition* —
+content rather than form — and survives every steer level including Native.
+
+Each kind of ask then names the proof that fits it: a transcription marks what
+it cannot read as `[unclear]` rather than inventing a digit; a chart reading
+refuses to estimate an illegible value; an identification lists what else it
+could plausibly be; alt text conveys purpose rather than an inventory.
+
+**Two of these asks are dangerous, and are treated that way.** "Is this mushroom
+safe to eat" and "is this mole cancerous" are among the most common things
+people photograph and ask about, and a confident wrong answer to either can
+hurt someone. A photograph cannot establish that food is safe or that a lesion
+is benign, so the prompt says so:
+
+> Never confirm from a photo that something is safe to eat: give the likely
+> identification, name the dangerous lookalikes, and say plainly that only an
+> expert in person can confirm it.
+
+> A photo cannot diagnose: say what it could be, what would make it urgent, and
+> that this needs a real clinician — do not reassure me.
+
+`tests/ui-vision.js` asserts both ceilings directly, so they cannot regress
+quietly. Prompts end with `[attach the image]` — the same device `summarize`
+uses for pasted text — and the launch buttons say plainly that they carry the
+prompt but not the picture, because a link cannot attach a file for you.
 
 ## Chaining: prompts that know about each other
 
