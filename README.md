@@ -30,9 +30,12 @@ screen, no scrolling, before the first keystroke.
   people ask, across 33 life-and-work domains (cooking, money, code, parenting,
   travel, legal, vision, care work, small-business admin, bureaucracy, …)
   with full a–z coverage and every common two-letter prefix resolved, so the
-  first keystroke always helps. Entries are tagged against what the engine
-  actually infers, not by feel: a generator audits every entry's domain tag
-  against `detectDomain` and fails the build on disagreement.
+  first keystroke always helps. Entries are written against what the engine
+  actually infers rather than tagged by feel — new entries are run through a
+  harness that slices `SIGS` and `detectDomain` out of `app.js` and reports
+  every disagreement. It is a reviewing tool, not a build gate: about 12% of the
+  corpus is tagged more specifically than free-typing can infer, which is
+  information the suggestion list should keep rather than throw away.
 - **Two-tower-style similarity matching.** The query and every entry are embedded
   into the same IDF-weighted token space and scored by cosine blended with
   character-trigram Jaccard — typos ("explan machine lerning") and reordered

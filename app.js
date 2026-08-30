@@ -133,7 +133,7 @@ const SIGS = [
      exactly those asks never fired. Note "document" and "form" are absent from
      the demonstrative list: "summarize this document" is usually pasted text,
      and summarize should keep it. */
-  ["vision",  /\b(this|these|the|my|attached)(?: \w+){0,2}? (photos?|images?|pictures?|screenshots?|charts?|graphs?|diagrams?|receipts?|labels?|menus?|signs?|scans?|x-?rays?|drawings?|paintings?|handwriting)\b|\bin (this|the) (photo|image|picture|screenshot)\b|\b(alt ?text|transcribe|ocr)\b|\bwhat (does|do) (this|these|the|it|my)( \w+)? say\b|\b(identify|what is) this (plant|bug|insect|bird|tree|flower|mushroom|breed|font|rock|part|rash|mole|spider|stain|mould|mold)\b|\bwhat (plant|bug|insect|bird|breed|font|mushroom) is this\b|\bread (this|my) (receipt|label|menu|sign|handwriting|note|meter|prescription|form|document)\b|\bis (this|these) \w+ (safe|edible|poisonous|dangerous|serious|infected|cancerous|fake|real|legit|a scam|a fake)\b|\bis this (a scam|legit|fake|real|safe to eat)\b/i],
+  ["vision",  /\b(this|these|the|my|attached)(?: \w+){0,2}? (photos?|images?|pictures?|screenshots?|charts?|graphs?|diagrams?|receipts?|labels?|menus?|signs?|scans?|x-?rays?|drawings?|paintings?|handwriting|circuit boards?|sheet music|knitting patterns?|lab reports?|maps?|invoices?|meters?|dials?|tattoos?|whiteboards?|bills?)\b|\bin (this|the) (photo|image|picture|screenshot)\b|\b(alt ?text|transcribe|ocr)\b|\bwhat (does|do) (this|these|the|it|my)( \w+){0,2}? say\b|\b(identify|what is) this (plant|bug|insect|bird|tree|flower|mushroom|breed|font|rock|part|rash|mole|spider|stain|mould|mold)\b|\bwhat (plant|bug|insect|bird|breed|font|mushroom) is this\b|\bread (this|my) (receipt|label|menu|sign|handwriting|note|meter|prescription|form|document)\b|\bis (this|these) \w+ (safe|edible|poisonous|dangerous|serious|infected|cancerous|fake|real|legit|a scam|a fake)\b|\bis this (a scam|legit|fake|real|safe to eat)\b/i],
   ["debug",   /\b(error|bug|traceback|exception|not working|fails?|crash|undefined|stack ?trace)\b/i],
   // "script" alone matches "ask for a raise script", which is words to say,
   // not a program. It only counts as code with a programming context around it.
@@ -159,7 +159,7 @@ const SIGS = [
      asking about their deposit. */
   ["legal",   /\b(landlord|tenant|deposit|evict|sue|lawsuit|lawyer|attorney|contract|my rights|small claims|custody|divorce|fired|wrongful|liable|warranty|refund policy|employer|fire me|my landlord)\b|\bmy lease\b|\blease (agreement|terms)\b|\bbreak the lease\b/i],
   ["career",  /\b(resume|cv|cover letter|laid off|promotion|a raise|interview|job offer|my manager|my boss|quit my job|career|underpaid|performance review)\b/i],
-  ["home",    /\b(drain|leak|clog|plumb|faucet|paint the|drywall|mow|lawn|gutter|furnace|thermostat|mold|landlord fix|hang a|garage|declutter)\b/i],
+  ["home",    /\b(drain|leak|clog|plumb|faucet|paint the|drywall|mow|lawn|gutter|furnace|thermostat|mold|landlord fix|hang a|garage|declutter|plant|houseplant|garden|seedling|soil|repot|prune|weeds?|compost)\b/i],
   ["social",  /\b(what should i say|what do i say|apolog|condolence|awkward|text back|break the news|difficult conversation|toast|eulogy)\b/i],
   ["lang",    /\b(in spanish|in french|in japanese|in german|in italian|translate|pronounce|conjugat|fluent)\b/i],
   ["sci",     /\b(physics|chemistry|biology|astronomy|evolution|quantum|molecule|galaxy|climate change|vaccine)\b/i],
