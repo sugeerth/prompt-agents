@@ -5,6 +5,10 @@
 /* Each domain: emoji, label, base line, and a deliverable shape per depth (0=TL;DR, 1=Standard, 2=Deep).
    Shapes are answer-shape-first and always end with an explicit size cap — that's what keeps replies short. */
 
+/* "compare these two photos" is not one picture, and telling the model to use
+   "the image" when there are two is a small wrongness in the first sentence. */
+const MANY_IMAGES = /\b(these|both|two|three|several|multiple|each|compare|difference between)\b/i;
+
 const GENERIC_SHAPES = [
   "The short version only — no preamble, no caveats.",
   null, // domain provides its own standard shape
@@ -99,6 +103,14 @@ const DOMAINS = {
     "Key points grouped by theme, numbers exact, then \"Bottom line:\" and one thing the author underplays.\n\n[paste text below]" ]},
   analyze:   { em:"📊", label:"Analyze",   base:t=>`Analyze: ${t}.`, shapes:[ null,
     "Findings in a short table (finding, evidence, confidence), then the 2 actions you'd take. Flag anything surprising.", null ]},
+  /* The opposite of `image`: that one writes a prompt to MAKE a picture, this
+     one reads a picture the user already has. The marker at the end is the same
+     device `summarize` uses for pasted text — a prompt about an image is
+     useless without the image, and people forget to attach it. */
+  vision:    { em:"👁️", label:"Vision",    base:t=>`Using the ${MANY_IMAGES.test(t) ? "images" : "image"} I've attached: ${t}.`, shapes:[
+    "Just the answer, one or two sentences.\n\n[attach the image]",
+    "Answer directly from what's visible, then note anything the image doesn't show that would change the answer. Max 120 words.\n\n[attach the image]",
+    "Answer from what's visible, then the details that support it, then what the image cannot tell you. Max 300 words.\n\n[attach the image]" ]},
   image:     { em:"🖼️", label:"Image",     base:t=>`Write one image-generation prompt for: ${t}.`, shapes:[
     "One flowing line: subject, style, mood. Nothing else.",
     "One flowing line covering subject, style, lighting, composition, mood — then a short negative prompt.",
@@ -115,6 +127,13 @@ const DOMAINS = {
 
 /* free-typing fallback: keyword → domain, checked in order */
 const SIGS = [
+  /* Checked first, deliberately. "Is this mushroom safe to eat" was landing in
+     `analyze` and "translate this sign" in `lang`, so the prompt never
+     mentioned the image at all — and the safety ceilings that exist for
+     exactly those asks never fired. Note "document" and "form" are absent from
+     the demonstrative list: "summarize this document" is usually pasted text,
+     and summarize should keep it. */
+  ["vision",  /\b(this|these|the|my|attached)(?: \w+){0,2}? (photos?|images?|pictures?|screenshots?|charts?|graphs?|diagrams?|receipts?|labels?|menus?|signs?|scans?|x-?rays?|drawings?|paintings?|handwriting|circuit boards?|sheet music|knitting patterns?|lab reports?|maps?|invoices?|meters?|dials?|tattoos?|whiteboards?|bills?)\b|\bin (this|the) (photo|image|picture|screenshot)\b|\b(alt ?text|transcribe|ocr)\b|\bwhat (does|do) (this|these|the|it|my)( \w+){0,2}? say\b|\b(identify|what is) this (plant|bug|insect|bird|tree|flower|mushroom|breed|font|rock|part|rash|mole|spider|stain|mould|mold)\b|\bwhat (plant|bug|insect|bird|breed|font|mushroom) is this\b|\bread (this|my) (receipt|label|menu|sign|handwriting|note|meter|prescription|form|document)\b|\bis (this|these) \w+ (safe|edible|poisonous|dangerous|serious|infected|cancerous|fake|real|legit|a scam|a fake)\b|\bis this (a scam|legit|fake|real|safe to eat)\b/i],
   ["debug",   /\b(error|bug|traceback|exception|not working|fails?|crash|undefined|stack ?trace)\b/i],
   // "script" alone matches "ask for a raise script", which is words to say,
   // not a program. It only counts as code with a programming context around it.
@@ -140,7 +159,7 @@ const SIGS = [
      asking about their deposit. */
   ["legal",   /\b(landlord|tenant|deposit|evict|sue|lawsuit|lawyer|attorney|contract|my rights|small claims|custody|divorce|fired|wrongful|liable|warranty|refund policy|employer|fire me|my landlord)\b|\bmy lease\b|\blease (agreement|terms)\b|\bbreak the lease\b/i],
   ["career",  /\b(resume|cv|cover letter|laid off|promotion|a raise|interview|job offer|my manager|my boss|quit my job|career|underpaid|performance review)\b/i],
-  ["home",    /\b(drain|leak|clog|plumb|faucet|paint the|drywall|mow|lawn|gutter|furnace|thermostat|mold|landlord fix|hang a|garage|declutter)\b/i],
+  ["home",    /\b(drain|leak|clog|plumb|faucet|paint the|drywall|mow|lawn|gutter|furnace|thermostat|mold|landlord fix|hang a|garage|declutter|plant|houseplant|garden|seedling|soil|repot|prune|weeds?|compost)\b/i],
   ["social",  /\b(what should i say|what do i say|apolog|condolence|awkward|text back|break the news|difficult conversation|toast|eulogy)\b/i],
   ["lang",    /\b(in spanish|in french|in japanese|in german|in italian|translate|pronounce|conjugat|fluent)\b/i],
   ["sci",     /\b(physics|chemistry|biology|astronomy|evolution|quantum|molecule|galaxy|climate change|vaccine)\b/i],
@@ -222,6 +241,10 @@ const NEEDS = {
   summarize: "Work only from the text I paste below.",
   // without this, Native returns a description of a logo rather than a prompt for one
   image: "Write this as one image-generation prompt.",
+  /* The one instruction that most improves a vision answer. A vision model's
+     characteristic failure is not refusing — it is describing something
+     plausible that is not in the picture, confidently. */
+  vision: "Work only from what's actually in the image — if something isn't visible, say so instead of guessing.",
 };
 
 /* Delegated work is not one thing. Each class of task has its own real proof
@@ -253,6 +276,46 @@ const AGENT_CLASSES = [
 function agentNeed(domId, t) {
   if (domId !== "agent") return null;
   for (const c of AGENT_CLASSES) if (c.sig.test(t) && !(c.not && c.not.test(t))) return c.line;
+  return null;
+}
+
+/* What a picture can and cannot settle.
+
+   Vision asks divide into kinds with genuinely different failure modes, and
+   two of them are dangerous. "Is this mushroom safe to eat" and "is this mole
+   cancerous" are among the most common things people photograph and ask about,
+   and both invite an answer that reads as authoritative and can be badly
+   wrong — a confident "looks fine" is the worst possible output. Those two get
+   an explicit ceiling on what a photograph can establish.
+
+   The rest are craft: a transcription should not silently invent a digit, an
+   identification should name what it could otherwise be, a chart reading
+   should not estimate a value it cannot see. First match wins, most specific
+   first. These are content, not formatting, so they survive every steer
+   level. */
+const VISION_CLASSES = [
+  { sig: /\b(safe to eat|edible|poisonous|toxic|mushroom|forage|foraging|wild (berry|berries|plant|garlic))\b/i,
+    line: "Never confirm from a photo that something is safe to eat: give the likely identification, name the dangerous lookalikes, and say plainly that only an expert in person can confirm it." },
+  { sig: /\b(rash|mole|lesion|wound|infection|infected|swelling|bite|x-?ray|cancer|melanoma|is this serious)\b/i,
+    line: "A photo cannot diagnose: say what it could be, what would make it urgent, and that this needs a real clinician — do not reassure me." },
+  { sig: /\b(scam|phishing|fraud|fake|legit|counterfeit)\b/i,
+    line: "Point to the specific visible signs either way, and say what to check before trusting it." },
+  { sig: /\b(read|transcribe|translat\w*|ocr|handwriting|receipt|invoice|label|menu|prescription|meter|form|contract|sign)\b|\bwhat (does|do) (this|these|the|it)( \w+)? say\b/i,
+    line: "Transcribe exactly what is written before interpreting it, keeping numbers and spelling as they appear, and mark anything you cannot read clearly as [unclear]." },
+  { sig: /\b(chart|graph|plot|dashboard|figure|axis|data)\b/i,
+    line: "Read the actual values off the image; if a value isn't legible, say so rather than estimating it." },
+  { sig: /\b(error|stack ?trace|traceback|log|console|terminal|build|exception)\b/i,
+    line: "Quote the exact error text visible in the image before interpreting it." },
+  { sig: /\b(identify|what is this|what plant|what bug|what bird|what breed|what font|species)\b/i,
+    line: "Give your best identification with the visible features that led to it, and list what else it could plausibly be." },
+  { sig: /\b(alt ?text|accessib|screen ?reader)\b/i,
+    line: "Write alt text that conveys the purpose of the image, not an inventory of everything in it." },
+  { sig: /\b(critique|feedback|improve|better|composition|design|layout|outfit)\b/i,
+    line: "Tie every point to something actually visible in the image." },
+];
+function visionNeed(domId, t) {
+  if (domId !== "vision") return null;
+  for (const c of VISION_CLASSES) if (c.sig.test(t)) return c.line;
   return null;
 }
 
@@ -399,19 +462,26 @@ function buildPrompt(topic, domId, depth, tone, activeMods, drill) {
   if (domId === "agent") return buildBrief(t, depth, activeMods, drill);
   const segs = [{ text: dom.base(t), add: false, kind: "base" }];
   if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
-  const classNeed = agentNeed(domId, t);
+  const classNeed = agentNeed(domId, t) || visionNeed(domId, t);
   if (classNeed && !state.noNeed) segs.push({ text: classNeed, add: true, kind: "need" });
   const shape = shapeFor(dom, depth);
-  // keep [paste text below] marker at the very end
-  const marker = shape.includes("\n\n[paste text below]");
-  const shapeCore = marker ? shape.replace("\n\n[paste text below]", "") : shape;
+  /* A trailing [bracketed] line is a marker, not part of the answer shape: it
+     tells the USER to bring something — text to paste, an image to attach.
+     Splitting it out here keeps it last in the prompt and keeps it alive in
+     Guided, which drops the shape sentence but still needs the attachment. */
+  const mk = shape.match(/\n\n(\[[^\]]+\])\s*$/);
+  const shapeCore = mk ? shape.slice(0, shape.length - mk[0].length) : shape;
   segs.push({ text: shapeCore, add: depth !== 1, kind: "shape" });
   if (depth === 0 && !/nothing else|no explanation|no long intros|\bonly\b/i.test(shapeCore))
     segs.push({ text: "No preamble.", add: true, kind: "shape" });
   if (AUDIENCE[tone]) segs.push({ text: AUDIENCE[tone], add: true, kind: "aud" });
   for (const m of activeMods) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
   if (drill) segs.push({ text: DRILL, add: false, kind: "drill" });
-  if (marker) segs.push({ text: "\n[paste text below]", add: false, kind: "marker" });
+  if (mk) {
+    const label = domId === "vision" && MANY_IMAGES.test(t)
+      ? "[attach the images]" : mk[1];
+    segs.push({ text: "\n" + label, add: false, kind: "marker" });
+  }
   return segs;
 }
 
@@ -706,7 +776,8 @@ function externalSegs() {
 const INTENT_IMPLIED = {
   decide: ["decide"], make: ["write", "email", "image"],
   plan: ["plan", "travel"], delegate: ["agent"], find: ["local", "shop"],
-  explore: ["create"], check: ["analyze"], do: ["cook"],
+  explore: ["create"], check: ["analyze", "vision"], understand: ["vision"],
+  do: ["cook"],
 };
 /* Only pairs where the prefix says the whole thing. "Help me decide:" and "I
    need to make a call" are one sentence written twice. "Tech help:" and "Lead
@@ -813,12 +884,17 @@ function stepSegs() {
       if (slot) segs.push({ text: slot.trim(), add: true, kind: "need" });
     }
     if (NEEDS[domId] && !state.noNeed) segs.push({ text: NEEDS[domId], add: true, kind: "need" });
-    const nClassNeed = agentNeed(domId, state.topic);
+    const nClassNeed = agentNeed(domId, state.topic) || visionNeed(domId, state.topic);
     if (nClassNeed && !state.noNeed) segs.push({ text: nClassNeed, add: true, kind: "need" });
     segs.push(...intentSegs(domId));
     if (AUDIENCE[state.tone]) segs.push({ text: AUDIENCE[state.tone], add: true, kind: "aud" });
     for (const m of active) segs.push({ text: m.text, add: true, kind: "mod", modId: m.id });
     segs.push(...reasonSegs(domId));
+    /* The attach reminder is for the user, not the model, so it belongs in
+       every mode — a vision prompt pasted without its image is just wrong. */
+    if (domId === "vision") segs.push({
+      text: MANY_IMAGES.test(state.topic) ? "\n[attach the images]" : "\n[attach the image]",
+      add: false, kind: "marker" });
     return segs;
   }
 
@@ -1183,8 +1259,18 @@ launchEl.addEventListener("click", e => {
   const tool = TOOLS[+b.dataset.t];
   const text = copyPrompt(true, "launch");
   if (!text) return;
-  if (tool.url) window.open(tool.url(text), "_blank");
-  else { window.open(tool.home, "_blank"); showToast("Copied — paste it into " + tool.name + " ✦"); }
+  const needsImage = state.topic.trim() && effectiveDomain() === "vision";
+  if (tool.url) {
+    window.open(tool.url(text), "_blank");
+    /* The launch link can carry the prompt but not the picture — better to say
+       so than to let someone wonder why the answer describes nothing. */
+    if (needsImage) showToast("Opened in " + tool.name + " — now attach your image ✦");
+  } else {
+    window.open(tool.home, "_blank");
+    showToast(needsImage
+      ? "Copied — paste it into " + tool.name + " and attach your image ✦"
+      : "Copied — paste it into " + tool.name + " ✦");
+  }
 });
 
 $("copy").addEventListener("click", () => copyPrompt());
@@ -1405,6 +1491,7 @@ renderChips(); update();
 const EXAMPLES = [
   "explain machine learning",
   "10 days in japan with kids on a tight budget",
+  "what is this plant",
   "fix my resume",
   "research the best health insurance for me",
 ];

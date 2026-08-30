@@ -32,6 +32,12 @@ const ok = m => console.log('  ok:', m);
 const DOMAINS = ['learn', 'code', 'debug', 'write', 'email', 'career', 'health', 'cook',
   'travel', 'money', 'fit', 'home', 'parent', 'shop', 'create', 'biz', 'market', 'legal',
   'lang', 'math', 'sci', 'plan', 'social', 'fun', 'tech', 'decide', 'summarize', 'analyze',
+  /* `vision` was added to the DOMAINS table in app.js alongside `image`, and is
+     its mirror image: `image` writes a prompt that MAKES a picture, `vision`
+     reads one the user attached. Copied here by hand for the same reason as the
+     rest of the list — importing would make this test agree with app.js instead
+     of checking it. */
+  'vision',
   'image', 'agent', 'local', 'general'];
 
 /* Every gold query that existed before the vocabulary expansion. A cached
@@ -57,8 +63,9 @@ const LEGACY_GOLD = ['write an email', 'resignation letter', 'cover letter', 'im
 
 /* Floors, not targets. They exist so a later edit that shrinks the corpus is
    loud rather than silent; raise them when the corpus grows. */
-const VOCAB_FLOOR = 850;
-const GOLD_FLOOR = 110;
+const VOCAB_FLOOR = 970;
+const GOLD_FLOOR = 130;
+const MODS_FLOOR = 38;
 const MAX_GOLD_WORDS = 60;
 
 /* ---- 1. data.js parses and exposes the three tables ---- */
@@ -173,9 +180,10 @@ if (failures) { console.log('\n1 FAILURES'); process.exit(1); }
   else ok(`vocabulary at ${PS_VOCAB.length} entries (floor ${VOCAB_FLOOR})`);
   if (PS_GOLD.length < GOLD_FLOOR) fail(`gold cache shrank to ${PS_GOLD.length}, floor is ${GOLD_FLOOR}`);
   else ok(`gold cache at ${PS_GOLD.length} prompts (floor ${GOLD_FLOOR})`);
-  /* modifiers are not generated from tools/ — this only catches truncation */
-  if (PS_MODS.length < 30) fail(`PS_MODS shrank to ${PS_MODS.length}`);
-  else ok(`${PS_MODS.length} one-tap modifiers intact`);
+  /* PS_MODS is now generated from tools/mods.json like everything else, so this
+     is a real floor rather than the truncation canary it used to be. */
+  if (PS_MODS.length < MODS_FLOOR) fail(`PS_MODS shrank to ${PS_MODS.length}, floor is ${MODS_FLOOR}`);
+  else ok(`${PS_MODS.length} one-tap modifiers (floor ${MODS_FLOOR})`);
 }
 
 /* ---- 9. every domain the app can render has vocabulary behind it ---- */
@@ -186,6 +194,65 @@ if (failures) { console.log('\n1 FAILURES'); process.exit(1); }
   const empty = DOMAINS.filter(d => d !== 'general' && !used.has(d));
   if (empty.length) fail('domains with no vocabulary at all: ' + empty.join(', '));
   else ok('every non-fallback domain has vocabulary behind it');
+}
+
+/* ---- 10. modifiers are chips, not paragraphs ---- */
+{
+  /* A chip is a label you read at a glance and one imperative sentence bolted
+     onto the prompt. Now that PS_MODS has a source file it can drift like
+     anything else, so it gets the same shape gate the other two tables get. */
+  const ids = new Set();
+  const bad = [];
+  for (const m of PS_MODS) {
+    if (typeof m.id !== 'string' || typeof m.label !== 'string' || typeof m.text !== 'string')
+      { bad.push(JSON.stringify(m)); continue; }
+    if (ids.has(m.id)) bad.push(`duplicate id: ${m.id}`);
+    ids.add(m.id);
+    if (m.label.length > 16) bad.push(`label ${m.label.length} chars: ${m.label}`);
+    if (m.text.split(/\s+/).length > 14) bad.push(`text is not one short sentence: ${m.id}`);
+    if (/\bplease\b/i.test(m.text)) bad.push(`politeness padding: ${m.id}`);
+    if (m.doms && m.doms.some(d => !DOMAINS.includes(d))) bad.push(`unknown domain on: ${m.id}`);
+  }
+  if (bad.length) fail(`${bad.length} malformed modifiers — ` + bad.slice(0, 6).join(' | '));
+  else ok('every modifier is a short label, one imperative sentence, known domains');
+}
+
+/* ---- 11. vision golds: no image, no answer — and a photo is not a diagnosis ---- */
+{
+  const vision = PS_GOLD.filter(g => g.d === 'vision');
+  if (!vision.length) fail('no vision gold prompts at all');
+  else ok(`${vision.length} vision gold prompts`);
+
+  /* Every other gold can degrade gracefully when the user pastes nothing. A
+     vision prompt cannot: without the picture there is nothing to answer about,
+     and people forget to attach. So the slot is mandatory, not stylistic. */
+  const noSlot = vision.filter(g => !/<attach[^<>]*>/.test(g.p)).map(g => g.q);
+  if (noSlot.length) fail('vision gold prompts with no <attach …> slot: ' + noSlot.join(', '));
+  else ok('every vision gold prompt ends the user at an attach slot');
+
+  /* The two asks where a confident answer is the actual harm. Both must send
+     the user to a human who can look in person, and neither may reassure. */
+  const CLAUSED = {
+    'is this mushroom safe to eat': /only an expert in person/i,
+    'is this mole cancerous': /a clinician has to look/i,
+    'is this spider dangerous': /never certain/i,
+  };
+  const missing = [];
+  for (const [q, re] of Object.entries(CLAUSED)) {
+    const g = vision.find(x => x.q === q);
+    if (!g) missing.push(`${q} (gold is gone)`);
+    else if (!re.test(g.p)) missing.push(`${q} (clause dropped)`);
+  }
+  if (missing.length) fail('vision golds missing their safety clause: ' + missing.join(', '));
+  else ok('the edibility and medical vision golds still defer to a person');
+
+  /* An identification from a photograph is a guess with a confidence, and the
+     one sentence that turns a guess into poisoning is "this is safe to eat".
+     No vision prompt may license the model to say it. */
+  const SAFE = /\b(safe to eat|edible and safe|perfectly safe|safe to consume|you can eat (it|this)|it is safe|it's safe|this is safe)\b/i;
+  const reassure = vision.filter(g => SAFE.test(g.p)).map(g => g.q);
+  if (reassure.length) fail('vision gold prompts that could call something safe to eat: ' + reassure.join(', '));
+  else ok('no vision gold prompt lets the model call anything safe to eat');
 }
 
 console.log(failures ? `\n${failures} FAILURES` : `\nALL DATA TESTS PASSED`);

@@ -14,7 +14,7 @@ is a defect budget rather than a free resource.
 
 ## The first screen is a box
 
-Before you type, the app is a heading, an input, four examples and one sentence
+Before you type, the app is a heading, an input, five examples and one sentence
 explaining what is about to happen. The prompt card's buttons, the axes, the
 modifier chips and Fine-tune are simply not rendered — every one of them is
 meaningless without a topic, and a screenful of dead controls is what makes a
@@ -26,26 +26,29 @@ screen, no scrolling, before the first keystroke.
 
 ## How it works
 
-- **Type one letter → suggestions.** 886 built-in completions of things real
-  people ask, across 32 life-and-work domains (cooking, money, code, parenting,
-  travel, legal, care work, small-business admin, bureaucracy, accessibility, …)
+- **Type one letter → suggestions.** 974 built-in completions of things real
+  people ask, across 33 life-and-work domains (cooking, money, code, parenting,
+  travel, legal, vision, care work, small-business admin, bureaucracy, …)
   with full a–z coverage and every common two-letter prefix resolved, so the
-  first keystroke always helps. Entries are tagged against what the engine
-  actually infers, not by feel: a generator audits every entry's domain tag
-  against `detectDomain` and fails the build on disagreement.
+  first keystroke always helps. Entries are written against what the engine
+  actually infers rather than tagged by feel — new entries are run through a
+  harness that slices `SIGS` and `detectDomain` out of `app.js` and reports
+  every disagreement. It is a reviewing tool, not a build gate: about 12% of the
+  corpus is tagged more specifically than free-typing can infer, which is
+  information the suggestion list should keep rather than throw away.
 - **Two-tower-style similarity matching.** The query and every entry are embedded
   into the same IDF-weighted token space and scored by cosine blended with
   character-trigram Jaccard — typos ("explan machine lerning") and reordered
   words ("salary negotiate") still land on the right entry. Fully client-side.
 - **Gold cache of the top real-world queries.** The head of the LLM query
   distribution — researched from published ChatGPT/Gemini/Perplexity usage data —
-  ships as 115 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
+  ships as 133 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
   served verbatim on similarity match, with chips and sliders still composable.
 - **Complex asks.** A multi-intent ask ("10 days in japan with kids on a budget")
   gets one guard line — "Cover every constraint I stated." — so nothing is dropped.
 - **Domain engine.** Each domain has a succinct prompt template in three depths
   (TL;DR / Standard / Deep) tuned to that kind of ask.
-- **One-tap modifiers.** 34 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
+- **One-tap modifiers.** 38 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
   each appends a short, battle-tested directive. The most relevant chips for your
   domain float to the front.
 - **Two axes.** Steer runs across the page, Depth runs up it — the pair defines
@@ -63,7 +66,9 @@ screen, no scrolling, before the first keystroke.
   to edit it in place: click a modifier to remove it, click the answer-shape
   sentence to cycle depth, click the audience line to clear it.
 - **One-tap launch.** Copy with ⏎, or open ChatGPT / Claude / Perplexity with the
-  prompt pre-filled (Gemini: copied + opened).
+  prompt pre-filled (Gemini: copied + opened). On a vision ask the launch says
+  plainly that it carries the prompt but not the picture — a link cannot attach
+  a file for you.
 
 ## Steer: how much the prompt is allowed to shape the reply
 
@@ -124,6 +129,48 @@ one-liner to full checkpoints and two-strike stop rules. Agent chips (Plan
 first, Define done, Show proof, Scope guard, Escalate, Clean up) cover the
 top failure modes of long-horizon agents, and six gold prompts ship for the
 most-delegated tasks.
+
+## Vision: asking a model about a picture you have
+
+The `image` domain writes a prompt to **make** a picture. `vision` is the
+opposite — reading, identifying, transcribing or judging a picture you attach,
+which is what a vision-language model is actually for. Read a receipt, identify
+a plant, explain a chart, transcribe handwriting, work out what an error
+screenshot says, critique a photo, get alt text.
+
+Every vision prompt carries one line that matters more than the rest:
+
+> Work only from the image — if something isn't visible in it, say so instead of guessing.
+
+A VLM's characteristic failure is not refusing. It is describing something
+plausible that is not in the picture, confidently. That line is the single
+biggest improvement available to a vision prompt, so it is a *precondition* —
+content rather than form — and survives every steer level including Native.
+
+Each kind of ask then names the proof that fits it: a transcription marks what
+it cannot read as `[unclear]` rather than inventing a digit; a chart reading
+refuses to estimate an illegible value; an identification lists what else it
+could plausibly be; alt text conveys purpose rather than an inventory.
+
+**Two of these asks are dangerous, and are treated that way.** "Is this mushroom
+safe to eat" and "is this mole cancerous" are among the most common things
+people photograph and ask about, and a confident wrong answer to either can
+hurt someone. A photograph cannot establish that food is safe or that a lesion
+is benign, so the prompt says so:
+
+> Never confirm from a photo that something is safe to eat: give the likely
+> identification, name the dangerous lookalikes, and say plainly that only an
+> expert in person can confirm it.
+
+> A photo cannot diagnose: say what it could be, what would make it urgent, and
+> that this needs a real clinician — do not reassure me.
+
+88 vocabulary entries and 18 hand-tuned gold prompts ship for the domain, and
+`tests/ui-vision.js` asserts both ceilings directly, so they cannot regress
+quietly. Four chips are scoped to it — Read the text, Alt text, What's wrong,
+Say confidence. Prompts end with `[attach the image]` — the same device `summarize`
+uses for pasted text — and the launch buttons say plainly that they carry the
+prompt but not the picture, because a link cannot attach a file for you.
 
 ## Chaining: prompts that know about each other
 

@@ -1,0 +1,364 @@
+[
+ {
+  "id": "table",
+  "label": "Table",
+  "text": "Format as a compact table."
+ },
+ {
+  "id": "bul3",
+  "label": "3 bullets",
+  "text": "Answer in 3 bullets max."
+ },
+ {
+  "id": "steps",
+  "label": "Steps",
+  "text": "Numbered steps only, one line each.",
+  "doms": [
+   "tech",
+   "home",
+   "cook",
+   "plan",
+   "debug",
+   "fit"
+  ]
+ },
+ {
+  "id": "eli5",
+  "label": "ELI5",
+  "text": "Explain like I'm five, 3 sentences.",
+  "doms": [
+   "learn",
+   "sci",
+   "math"
+  ]
+ },
+ {
+  "id": "example",
+  "label": "Real example",
+  "text": "Give one concrete real-world example.",
+  "doms": [
+   "learn",
+   "biz",
+   "market",
+   "lang"
+  ]
+ },
+ {
+  "id": "diagram",
+  "label": "Diagram",
+  "text": "Include a simple text diagram.",
+  "doms": [
+   "learn",
+   "sci",
+   "math",
+   "tech",
+   "code"
+  ]
+ },
+ {
+  "id": "proscons",
+  "label": "Pros/cons",
+  "text": "3 pros, 3 cons, nothing else.",
+  "doms": [
+   "decide",
+   "shop",
+   "biz"
+  ]
+ },
+ {
+  "id": "w100",
+  "label": "100 words",
+  "text": "Under 100 words total."
+ },
+ {
+  "id": "checklist",
+  "label": "Checklist",
+  "text": "Format as an ordered checklist.",
+  "doms": [
+   "plan",
+   "travel",
+   "home",
+   "career"
+  ]
+ },
+ {
+  "id": "analogy",
+  "label": "Analogy",
+  "text": "Include one short analogy.",
+  "doms": [
+   "learn",
+   "sci"
+  ]
+ },
+ {
+  "id": "quiz",
+  "label": "Quiz me",
+  "text": "Then quiz me with 3 short questions.",
+  "doms": [
+   "learn",
+   "lang",
+   "math",
+   "sci"
+  ]
+ },
+ {
+  "id": "next",
+  "label": "Next step",
+  "text": "End with one concrete next step.",
+  "doms": [
+   "career",
+   "biz",
+   "plan",
+   "money",
+   "fit"
+  ]
+ },
+ {
+  "id": "yesno",
+  "label": "Yes/no",
+  "text": "Start with yes or no, then why.",
+  "doms": [
+   "decide",
+   "health",
+   "money"
+  ]
+ },
+ {
+  "id": "top3",
+  "label": "Top 3",
+  "text": "Just the top 3, ranked.",
+  "doms": [
+   "shop",
+   "create",
+   "fun"
+  ]
+ },
+ {
+  "id": "compare",
+  "label": "Compare",
+  "text": "Compare in a two-column table.",
+  "doms": [
+   "decide",
+   "shop",
+   "tech"
+  ]
+ },
+ {
+  "id": "mistakes",
+  "label": "Mistakes",
+  "text": "List the 3 most common mistakes.",
+  "doms": [
+   "learn",
+   "fit",
+   "cook",
+   "money",
+   "career"
+  ]
+ },
+ {
+  "id": "numbers",
+  "label": "Numbers",
+  "text": "Include specific numbers and figures.",
+  "doms": [
+   "money",
+   "biz",
+   "analyze",
+   "fit",
+   "sci"
+  ]
+ },
+ {
+  "id": "sources",
+  "label": "Sources",
+  "text": "Cite 2\u20133 reputable sources.",
+  "doms": [
+   "health",
+   "sci",
+   "money",
+   "legal"
+  ]
+ },
+ {
+  "id": "template",
+  "label": "Template",
+  "text": "Give a fill-in-the-blank template.",
+  "doms": [
+   "write",
+   "email",
+   "biz",
+   "legal"
+  ]
+ },
+ {
+  "id": "codeonly",
+  "label": "Code only",
+  "text": "Code only, no explanation.",
+  "doms": [
+   "code",
+   "debug"
+  ]
+ },
+ {
+  "id": "mermaid",
+  "label": "Mermaid",
+  "text": "Output a mermaid diagram only.",
+  "doms": [
+   "code",
+   "agent",
+   "tech"
+  ]
+ },
+ {
+  "id": "cheat",
+  "label": "Cheat sheet",
+  "text": "Format as a one-screen cheat sheet.",
+  "doms": [
+   "learn",
+   "lang",
+   "math",
+   "code"
+  ]
+ },
+ {
+  "id": "counter",
+  "label": "Counter",
+  "text": "Add one strong counterargument.",
+  "doms": [
+   "decide",
+   "analyze",
+   "biz"
+  ]
+ },
+ {
+  "id": "askfirst",
+  "label": "Ask first",
+  "text": "Ask one clarifying question before answering.",
+  "doms": [
+   "agent",
+   "debug",
+   "decide",
+   "legal"
+  ]
+ },
+ {
+  "id": "blunt",
+  "label": "Blunt",
+  "text": "Be blunt; no hedging or caveats."
+ },
+ {
+  "id": "casual",
+  "label": "Casual",
+  "text": "Casual, conversational tone.",
+  "doms": [
+   "write",
+   "email",
+   "social",
+   "fun"
+  ]
+ },
+ {
+  "id": "formal",
+  "label": "Formal",
+  "text": "Formal, professional tone.",
+  "doms": [
+   "write",
+   "email",
+   "career",
+   "legal"
+  ]
+ },
+ {
+  "id": "deeper",
+  "label": "Deeper",
+  "text": "Go one level deeper, still brief."
+ },
+ {
+  "id": "planfirst",
+  "label": "Plan first",
+  "text": "Plan first; wait for my OK before executing.",
+  "doms": [
+   "agent",
+   "code",
+   "biz"
+  ]
+ },
+ {
+  "id": "definedone",
+  "label": "Define done",
+  "text": "Define done as a checkable end state first.",
+  "doms": [
+   "agent",
+   "code",
+   "biz"
+  ]
+ },
+ {
+  "id": "showproof",
+  "label": "Show proof",
+  "text": "Show evidence: paste the output that proves success.",
+  "doms": [
+   "agent",
+   "code",
+   "debug"
+  ]
+ },
+ {
+  "id": "scopeguard",
+  "label": "Scope guard",
+  "text": "Fix only what's asked; note other issues, don't touch.",
+  "doms": [
+   "agent",
+   "code",
+   "debug"
+  ]
+ },
+ {
+  "id": "escalate",
+  "label": "Escalate",
+  "text": "If blocked twice on one thing, stop and ask.",
+  "doms": [
+   "agent"
+  ]
+ },
+ {
+  "id": "cleanup",
+  "label": "Clean up",
+  "text": "Remove temp files, branches, debug code before finishing.",
+  "doms": [
+   "agent",
+   "code"
+  ]
+ },
+ {
+  "id": "readtext",
+  "label": "Read the text",
+  "text": "Transcribe any text in the image exactly, marking anything unreadable as [unclear].",
+  "doms": [
+   "vision"
+  ]
+ },
+ {
+  "id": "alttext",
+  "label": "Alt text",
+  "text": "Also give a one-sentence alt text for the image.",
+  "doms": [
+   "vision"
+  ]
+ },
+ {
+  "id": "spotwrong",
+  "label": "What's wrong",
+  "text": "Point out anything that looks wrong, damaged or out of place.",
+  "doms": [
+   "vision"
+  ]
+ },
+ {
+  "id": "confid",
+  "label": "Say confidence",
+  "text": "Give a confidence level for each claim, and say what would confirm it.",
+  "doms": [
+   "vision"
+  ]
+ }
+]
