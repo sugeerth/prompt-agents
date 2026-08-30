@@ -6,13 +6,19 @@ regeneration. The sources of truth live here:
 
 | file | what it holds |
 | --- | --- |
+| `mods.json` | the one-tap modifier chips — `{"id": "…", "label": "…", "text": "…", "doms": ["<domain id>"]?}` |
 | `vocab.json` | the autocomplete vocabulary — `{"t": "<what someone types>", "d": "<domain id>"}` |
 | `gold.json` | the hand-tuned prompt cache — `{"q": "<query>", "d": "<domain id>", "p": "<prompt served verbatim>"}` |
-| `gen-data.js` | validates both, then writes `../data.js` |
+| `gen-data.js` | validates all three, then writes `../data.js` |
 
-`PS_MODS` (the one-tap modifiers) is deliberately **not** stored here. The
-generator lifts that block verbatim out of the current `data.js`, so
-regenerating the vocabulary can never perturb the modifier list.
+`PS_MODS` used to be the exception: the generator lifted that block verbatim out
+of the current `data.js` so regenerating the vocabulary could not perturb it.
+The effect was that the modifier list had **no source of truth** — the only copy
+lived in a generated file, and the generator's job was to copy it back onto
+itself. It is now sourced from `mods.json` like everything else; the cut-over
+was made byte-identical, so nothing about the shipped list changed on the way
+in. A chip is a short label (16 characters), one imperative sentence, and an
+optional `doms` list that floats it to the front in those domains.
 
 ## Regenerate
 
@@ -97,6 +103,6 @@ House rules, all enforced:
 ## Floors
 
 `gen-data.js` and `tests/data-eval.js` both hold a floor on the corpus size
-(currently 850 vocabulary entries, 110 gold prompts). They exist so a later edit
-that shrinks the corpus fails loudly. Raise them as the corpus grows; do not
-lower them to make a build pass.
+(currently 970 vocabulary entries, 130 gold prompts, 38 modifiers). They exist
+so a later edit that shrinks the corpus fails loudly. Raise them as the corpus
+grows; do not lower them to make a build pass.

@@ -26,7 +26,7 @@ screen, no scrolling, before the first keystroke.
 
 ## How it works
 
-- **Type one letter → suggestions.** 886 built-in completions of things real
+- **Type one letter → suggestions.** 974 built-in completions of things real
   people ask, across 33 life-and-work domains (cooking, money, code, parenting,
   travel, legal, vision, care work, small-business admin, bureaucracy, …)
   with full a–z coverage and every common two-letter prefix resolved, so the
@@ -39,13 +39,13 @@ screen, no scrolling, before the first keystroke.
   words ("salary negotiate") still land on the right entry. Fully client-side.
 - **Gold cache of the top real-world queries.** The head of the LLM query
   distribution — researched from published ChatGPT/Gemini/Perplexity usage data —
-  ships as 115 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
+  ships as 133 hand-reasoned prompts, surfaced as pinned ★ "tuned" suggestions and
   served verbatim on similarity match, with chips and sliders still composable.
 - **Complex asks.** A multi-intent ask ("10 days in japan with kids on a budget")
   gets one guard line — "Cover every constraint I stated." — so nothing is dropped.
 - **Domain engine.** Each domain has a succinct prompt template in three depths
   (TL;DR / Standard / Deep) tuned to that kind of ask.
-- **One-tap modifiers.** 34 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
+- **One-tap modifiers.** 38 chips — Diagram, ELI5, Table, Steps, Quiz me, Pros/cons… —
   each appends a short, battle-tested directive. The most relevant chips for your
   domain float to the front.
 - **Two axes.** Steer runs across the page, Depth runs up it — the pair defines
@@ -162,8 +162,10 @@ is benign, so the prompt says so:
 > A photo cannot diagnose: say what it could be, what would make it urgent, and
 > that this needs a real clinician — do not reassure me.
 
+88 vocabulary entries and 18 hand-tuned gold prompts ship for the domain, and
 `tests/ui-vision.js` asserts both ceilings directly, so they cannot regress
-quietly. Prompts end with `[attach the image]` — the same device `summarize`
+quietly. Four chips are scoped to it — Read the text, Alt text, What's wrong,
+Say confidence. Prompts end with `[attach the image]` — the same device `summarize`
 uses for pasted text — and the launch buttons say plainly that they carry the
 prompt but not the picture, because a link cannot attach a file for you.
 
