@@ -14,7 +14,7 @@
    release requests new URLs, so a cached asset can never shadow a newer one.
    The cache name carries the same version so old caches are swept on activate. */
 
-const VERSION = "21";
+const VERSION = "22";
 const CACHE = "prompt-studio-v" + VERSION;
 
 /* Only what is needed to render something useful with no connection at all.

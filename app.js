@@ -559,6 +559,7 @@ const REASON = window.PS_REASON;
 const INTENT = window.PS_INTENT;
 const CHAIN = window.PS_CHAIN;
 const PROFILE = window.PS_PROFILE;
+const ROUTER = window.PS_ROUTER;
 const BRIDGE = window.PS_BRIDGE;
 
 /* ---------- elements ---------- */
@@ -1416,26 +1417,67 @@ function observe(type) {
   if (!PROFILE || !state.topic.trim()) return;
   const domId = state.domain || detectDomain(state.topic);
   const r = INTENT ? INTENT.recognize(state.topic) : null;
+  const text = state.gold ? state.gold.q : state.topic;
   PROFILE.observe({
-    type, text: state.gold ? state.gold.q : state.topic, domain: domId,
+    type, text, domain: domId,
     intent: r ? r.id : null, steer: state.steer, depth: state.depth,
   });
+
+  /* The router learns at the same moment but from a different fact. The
+     profile records WHAT the ask was about; the router records whether the
+     axes it opened on were the ones the user ended up taking. It is fed even
+     while it is still silent, because a layer that only learned once it was
+     confident enough to speak would never become confident enough to speak. */
+  if (ROUTER && ROUTER.enabled() && (type === "copy" || type === "launch")) {
+    const settled = ROUTER.armOf(state.steer, state.depth);
+    const shown = offeredArm || settled;
+    ROUTER.record({
+      ask: text, domain: domId, offered: offeredArm !== null,
+      arm: shown, taken: settled,
+      outcome: shown === settled ? "took" : "changed",
+    });
+    offeredArm = null;
+  }
   if (type !== "type") syncLearnUI();
 }
 
 /* Settings the user endorsed last time they took a prompt in this domain.
    Applied only until they touch the axes themselves — a remembered default is
-   a starting point, never an override of a live decision. */
+   a starting point, never an override of a live decision.
+
+   The router gets first refusal, because it estimates the same thing better.
+   PROFILE.prefs() is the LAST composition endorsed here, which follows the
+   noise in a person's choices; the router estimates which composition they
+   settle on most often for asks that read like this one. tests/router-eval.js
+   measures that difference rather than asserting it — +5.4 points of "opened
+   on the setting they actually wanted", winning on every seed. When the router
+   has too little evidence to speak it returns null and the line below is
+   exactly the old behaviour, so this can only add. */
 let lastDomain = null;
+let offeredArm = null;      // the composition the router opened the axes on, for this ask
 function applyRemembered(domId) {
   if (!PROFILE || !PROFILE.enabled() || state.padTouched || domId === lastDomain) return;
   lastDomain = domId;
+
+  const pick = ROUTER && ROUTER.enabled()
+    ? ROUTER.offer(state.gold ? state.gold.q : state.topic, domId)
+    : null;
+  if (pick) {
+    offeredArm = pick.arm;
+    setAxes(pick.steer, pick.depth);
+    return;
+  }
+
+  offeredArm = null;
   const p = PROFILE.prefs(domId);
-  if (!p) return;
-  if (p.steer && STEER_MODES.indexOf(p.steer) >= 0) { state.steer = p.steer; syncSteerUI(); }
-  if (typeof p.depth === "number" && p.depth >= 0 && p.depth <= 2) {
-    state.depth = p.depth;
-    $("depth").value = String(p.depth);
+  if (p) setAxes(p.steer, p.depth);
+}
+
+function setAxes(steer, depth) {
+  if (steer && STEER_MODES.indexOf(steer) >= 0) { state.steer = steer; syncSteerUI(); }
+  if (typeof depth === "number" && depth >= 0 && depth <= 2) {
+    state.depth = depth;
+    $("depth").value = String(depth);
     syncDepthUI();
   }
 }

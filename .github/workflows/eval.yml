@@ -23,6 +23,8 @@ jobs:
         run: node tests/reasoning-eval.js
       - name: Score intent recognition
         run: node tests/intent-eval.js
+      - name: Learning router beats last-write-wins
+        run: node tests/router-eval.js
 
   # Full behaviour: the app is driven in a real browser.
   ui:
