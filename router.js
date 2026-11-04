@@ -80,8 +80,9 @@
      runs DIAGONAL LinUCB: per-feature precision only, no cross-feature terms.
      It is a real approximation and it is a deliberate one — it cannot learn
      that two tokens only matter together, and in exchange it costs 2 x DIM
-     floats per arm (~1.5 KB for the whole model) and cannot be the reason a
-     browser starts evicting this origin. 24 buckets collide more than the 128
+     floats per arm instead of DIM x DIM. Measured, that is about 2 KB after a
+     week in one domain and under 8 KB at the twelve-domain cap, against the
+     ~40 KB a full covariance would need; the eval fails above 12 KB. 24 buckets collide more than the 128
      a server-side version would use; the per-domain tally below is what carries
      the precision the hashing loses. */
   const DIM = 24;

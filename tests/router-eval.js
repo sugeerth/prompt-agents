@@ -319,12 +319,27 @@ const st = fakeStore();
 R._useStorage(st);
 R.setEnabled(true);
 R.forget();
-for (let i = 0; i < 30; i++) {
-  R.record({ ask: 'a stored ask about taxes and deductions', domain: 'money', arm: 'guided:1', outcome: 'took' });
+/* Varied asks across several domains, because that is what the stored size
+   actually depends on. An earlier version of this check repeated ONE ask and
+   reported 1.1 KB, which was true and unrepresentative: one ask touches a
+   handful of hash buckets, so almost every slot in every arm's arrays stayed
+   at its prior and serialized short. Real use fills them. Measuring the easy
+   case and quoting it as the model's size is how a number ends up on a README
+   being wrong by a factor of seven. */
+const VARIED = ['fix my failing build', 'sourdough starter hydration',
+                'how much to save for a house', 'summarize this contract',
+                'plan a trip to japan with kids', 'write the launch email'];
+for (let i = 0; i < 240; i++) {
+  R.record({ ask: VARIED[i % VARIED.length] + ' ' + i, domain: 'dom' + (i % 6),
+             arm: R.ARMS[i % R.ARMS.length], outcome: 'took' });
 }
 check(st.keys().length === 1 && st.keys()[0] === KEY, `exactly one key written (${st.keys().join(', ')})`);
 const size = (st.getItem(KEY) || '').length;
-check(size < 12000, `the whole model stays small (${size} bytes) — a nicety must not get the origin evicted`);
+console.log(`     stored size, 6 domains x 240 varied asks: ${size} bytes (${(size / 1024).toFixed(1)} KB)`);
+check(size < 12000, `the whole model stays bounded (${size} bytes) — a nicety must not get the origin evicted`);
+/* The cap is what matters, but a sudden collapse would mean the model stopped
+   recording something, so the floor is asserted too. */
+check(size > 1500, `and is actually holding a model rather than silently emptying (${size} bytes)`);
 
 /* It has to survive a page load, or none of the learning above matters. */
 R._useStorage(st);

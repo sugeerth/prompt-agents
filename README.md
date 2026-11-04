@@ -281,7 +281,9 @@ Three more properties, each tested rather than claimed:
   words, so "debug the failing import in this build" inherits from "fix my
   failing build" without sharing a domain label. Diagonal, not full: a full
   covariance matrix per arm is ~40 KB of `localStorage` for a nicety sitting
-  next to a 240-token profile. The whole model is **1.1 KB**.
+  next to a 240-token profile. Diagonal measures **about 2 KB** after a week in
+  one domain and **under 8 KB** at the twelve-domain cap; the eval prints the
+  figure and fails above 12 KB.
 - **It forgets.** The same ~30-day half-life as the profile, so a preference
   that changes is tracked rather than outvoted by history.
 
