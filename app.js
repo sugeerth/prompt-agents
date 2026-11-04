@@ -1482,27 +1482,63 @@ function setAxes(steer, depth) {
   }
 }
 
+/* One switch governs every layer that remembers anything, and one button
+   erases all of it. The router is a second learner with a second storage key,
+   and the moment there are two of those behind one switch, "Off — nothing
+   about you is stored" becomes a claim that has to be maintained rather than
+   a fact. These three functions are where it is maintained. */
+function learningOn() { return !!(PROFILE && PROFILE.enabled()); }
+
+function setLearning(on) {
+  if (PROFILE) PROFILE.setEnabled(on);
+  if (ROUTER) ROUTER.setEnabled(on);
+  offeredArm = null;
+  lastDomain = null;       // so the axes stop being steered by a model just erased
+}
+
 function syncLearnUI() {
   if (!PROFILE) return;
-  const on = PROFILE.enabled(), b = $("learn"), note = $("learnnote");
+  const on = learningOn(), b = $("learn"), note = $("learnnote");
   b.classList.toggle("on", on);
   b.setAttribute("aria-pressed", String(on));
   $("learnOut").textContent = on ? "On" : "Off";
   const s = on ? PROFILE.summary() : null;
+  const r = on && ROUTER ? ROUTER.explain() : null;
+  /* The router earns its own clause only once it is actually steering the
+     axes. Before that it is accumulating observations and changing nothing,
+     and saying so would describe a behaviour the user cannot yet observe. */
+  const steering = r && r.ready
+    ? ` Opens the axes where you usually leave them.`
+    : "";
   note.innerHTML = !on
     ? "Off — nothing about you is stored."
     : s && s.tokens
-      ? `Remembers ${s.tokens} words from ${s.asks} ${s.asks === 1 ? "ask" : "asks"}, in this browser only. ` +
+      ? `Remembers ${s.tokens} words from ${s.asks} ${s.asks === 1 ? "ask" : "asks"}, in this browser only.${steering} ` +
         `<button data-forget="1" type="button">Forget everything</button>`
       : "Nothing remembered yet. Whatever it learns stays in this browser.";
 }
 if (PROFILE) {
-  $("learn").addEventListener("click", () => { PROFILE.setEnabled(!PROFILE.enabled()); syncLearnUI(); });
+  $("learn").addEventListener("click", () => { setLearning(!learningOn()); syncLearnUI(); });
   $("learnnote").addEventListener("click", e => {
     if (!e.target.closest("[data-forget]")) return;
-    PROFILE.forget(); syncLearnUI(); showToast("Forgotten — nothing remembered ✦");
+    if (PROFILE) PROFILE.forget();
+    if (ROUTER) ROUTER.forget();
+    offeredArm = null;
+    lastDomain = null;
+    syncLearnUI(); showToast("Forgotten — nothing remembered ✦");
   });
+  /* Reconcile at boot. The router's key is newer than the profile's, so a
+     returning user who switched learning off before this layer existed has no
+     router key at all — and a fresh one defaults to on. Without this line that
+     user's next visit would quietly start learning again behind a switch
+     reading "Off", which is the exact failure both modules are written to
+     prevent. The profile's switch is the one the user actually set, so it wins. */
+  if (ROUTER && ROUTER.enabled() !== PROFILE.enabled()) ROUTER.setEnabled(PROFILE.enabled());
   syncLearnUI();
+  /* One test seam, in the spirit of profile.js's _useStorage: tests/ui-router.js
+     drives the modules directly to set up a state, and needs the panel to
+     re-render without faking a clipboard write to get there. */
+  window.__syncLearn = syncLearnUI;
 }
 
 /* ---------- external structure ----------

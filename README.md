@@ -290,6 +290,14 @@ kind, one versioned `localStorage` key, bounded size, an off switch that wipes
 rather than hides, and an eval that greps the source and fails if a network API
 ever appears in it.
 
+And because there are now **two** things that remember you behind **one**
+switch, the coupling is a test rather than a convention. `tests/ui-router.js`
+drives the real DOM and asserts that the switch governs both layers, that
+Forget removes both keys rather than blanking them, that records are dropped
+while the switch is off rather than buffered, and — the upgrade case that is
+easy to miss — that someone who turned learning off *before* this layer existed
+is not silently opted back in by the new key defaulting to on.
+
 ## Works with no connection, and installs like an app
 
 The app makes no network calls of any kind once it has loaded — the vocabulary,

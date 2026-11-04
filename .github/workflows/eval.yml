@@ -53,3 +53,5 @@ jobs:
         run: node tests/ui-goodhart.js
       - name: Agent harness
         run: node tests/ui-agent.js
+      - name: Learning router in the app (one switch, one Forget)
+        run: node tests/ui-router.js
