@@ -25,6 +25,8 @@ jobs:
         run: node tests/intent-eval.js
       - name: Learning router beats last-write-wins
         run: node tests/router-eval.js
+      - name: Off-policy estimators against ground truth
+        run: node tests/lab-eval.js
 
   # Full behaviour: the app is driven in a real browser.
   ui:

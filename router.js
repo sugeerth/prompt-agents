@@ -402,34 +402,116 @@
 
   /* ---------- the public decision ---------- */
 
+  /* How often the router opens on something other than its current favourite.
+
+     This is the one constant here that buys something other than accuracy, and
+     it costs a little of it. A policy that always takes its own argmax
+     generates logs from which NOTHING can be learned about the compositions it
+     did not pick: under a deterministic policy every alternative was chosen
+     with probability zero, so there is no honest way to ask "what would this
+     other setting have scored?" — the question has no data behind it. Randomize
+     a little and the question becomes answerable for every composition, which
+     is what lab.js does with these propensities.
+
+     What it costs is measured rather than assumed, and the first attempt at it
+     was wrong in a way only measuring caught: plain epsilon-greedy spread over
+     every composition took the router from 66.7% to 61.6%, surrendering almost
+     exactly as much accuracy as the whole layer is worth. Confining the
+     randomization to near-ties (see MARGIN) changes the trade completely. The
+     measured frontier, 8 seeds, epsilon 0.25:
+
+       MARGIN 0.05   cost 0.5pt   2.3% of decisions off-policy ... 0.7%
+       MARGIN 0.20   cost 0.5pt   2.3% off-policy      <- here
+       MARGIN 0.35   cost 1.1pt   4.5% off-policy
+       MARGIN 0.60   cost 4.0pt   9.5% off-policy
+
+     Past 0.20 the "near-tie" set starts admitting compositions the model can
+     separate perfectly well, and the cost climbs with nothing to show for it. */
+  const EPSILON = 0.25;
+
+  /* How close to the leader a composition has to be before the router is
+     willing to open on it instead.
+
+     Randomizing only among compositions the model cannot actually separate
+     buys propensity diversity for a fraction of the regret, because a swap
+     between two arms it rates equally is close to free by definition. The
+     measured cost is 0.5 of a point against a greedy policy, where spreading
+     the same exploration uniformly cost 5.
+
+     It also fails in the right direction. Where one composition dominates,
+     the policy is deterministic there and lab.js simply cannot answer
+     questions about the others in that context — which is the truth, rather
+     than an answer built out of three stray observations. */
+  const MARGIN = 0.20;
+
+  /* The policy as a distribution, not a choice. Every composition within
+     MARGIN of the leader gets a known, non-zero probability, so the propensity
+     of whatever gets chosen is exact rather than estimated — the property
+     off-policy evaluation actually needs. */
+  function policy(ask, domain, eps) {
+    const e = eps === undefined ? EPSILON : Math.max(0, Math.min(1, eps));
+    const x = features(ask || "");
+    const scores = {};
+    let best = null;
+    for (const id of ARMS) {
+      const s = score(id, x, domain);
+      scores[id] = s;
+      if (!best || s.value > best.value) best = { id, ...s };
+    }
+    const near = ARMS.filter(id => scores[id].value >= best.value - MARGIN);
+    const probs = {};
+    const share = near.length ? e / near.length : 0;
+    for (const id of ARMS) {
+      probs[id] = (near.indexOf(id) >= 0 ? share : 0) + (id === best.id ? 1 - e : 0);
+    }
+    return { probs, best, scores, epsilon: e, candidates: near.length };
+  }
+
   /* What the router would open the axes on for this ask, or null to leave the
      app's own default alone. Null is the correct answer far more often than a
      recommender is usually willing to admit: before MIN_EVIDENCE there is
      nothing to say, and saying something anyway is how a tool earns a
-     reputation for moving things for no reason. */
-  function offer(ask, domain) {
+     reputation for moving things for no reason.
+
+     `opts.epsilon` overrides the exploration rate; `opts.greedy` turns it off
+     entirely, which is what best_for-style questions want — "what do you
+     believe" rather than "what will you do". */
+  function offer(ask, domain, opts) {
     if (!S.on) return null;
     if (S.total < MIN_EVIDENCE) return null;
 
-    const x = features(ask || "");
-    let best = null;
-    for (const id of ARMS) {
-      const s = score(id, x, domain);
-      if (!best || s.value > best.value) best = { id, ...s };
-    }
-    if (!best) return null;
+    const o = opts || {};
+    const eps = o.greedy ? 0 : o.epsilon;
+    const pol = policy(ask, domain, eps);
+    if (!pol.best) return null;
 
-    const { steer, depth } = parseArm(best.id);
+    let chosen = pol.best.id;
+    if (pol.epsilon > 0) {
+      let r = rand(), acc = 0;
+      for (const id of ARMS) { acc += pol.probs[id]; if (r <= acc) { chosen = id; break; } }
+    }
+
+    const { steer, depth } = parseArm(chosen);
     return {
-      steer, depth, arm: best.id,
+      steer, depth, arm: chosen,
+      /* The probability this policy assigned to what it just did. Logging it is
+         the whole reason a counterfactual is available later. */
+      p: +pol.probs[chosen].toFixed(6),
+      onPolicy: chosen === pol.best.id,
       /* Whether this is a settled preference or a probe. app.js does not change
          behaviour on it — the axes move either way — but the transparency panel
          says which, because a user who sees the slider move deserves to know
          whether the app is confident or curious. */
-      exploring: best.explore > 0.12,
-      score: +best.value.toFixed(4),
+      exploring: pol.best.explore > 0.12 || chosen !== pol.best.id,
+      score: +pol.scores[chosen].value.toFixed(4),
     };
   }
+
+  /* Randomness, with a seam. The app wants a real random draw; the evals want
+     a reproducible one, because a test that passes on some seeds and not others
+     is a coin flip with extra steps. */
+  let rand = Math.random;
+  function _useRandom(fn) { rand = typeof fn === "function" ? fn : Math.random; }
 
   /* ---------- learning ---------- */
 
@@ -609,9 +691,9 @@
 
   window.PS_ROUTER = {
     ARMS, armOf, parseArm,
-    offer, record, setTemplateVersion,
+    offer, policy, record, setTemplateVersion,
     stats, leader, explain,
-    forget, enabled, setEnabled, _useStorage,
+    forget, enabled, setEnabled, _useStorage, _useRandom,
   };
 })();
 

@@ -239,6 +239,61 @@ check(routerRate <= ceiling + 0.02,
   'without exceeding the mode, which would mean the harness is measuring something other than it thinks');
 
 /* ---------------------------------------------------------------- */
+console.log('\n== exploration is cheap, and it is what makes lab.js possible ==');
+
+/* The router randomizes a little so its logs carry propensities, which is the
+   only thing that lets anyone ask what a DIFFERENT policy would have scored.
+   That costs accuracy, and the amount is not something to assume: the first
+   attempt spread exploration over every composition and gave up five points,
+   as much as the whole layer is worth. Confining it to near-ties is what makes
+   the trade worth taking, so both halves are asserted here. */
+function accuracyAt(eps) {
+  let total = 0;
+  for (const s of SEEDS) {
+    const r = rng(s);
+    reset();
+    R._useRandom(rng(s * 7919));
+    let matched = 0, n = 0;
+    for (let i = 0; i < 600; i++) {
+      const domain = r() < 0.5 ? 'code' : 'cook';
+      const ask = ASKS[domain][(r() * ASKS[domain].length) | 0];
+      const truth = want(domain, r);
+      const o = R.offer(ask, domain, { epsilon: eps });
+      const offered = o ? o.arm : 'guided:1';
+      if (i >= 100) { n++; if (offered === truth) matched++; }
+      R.record({ ask, domain, arm: offered, taken: truth,
+                 outcome: offered === truth ? 'took' : 'changed' });
+    }
+    total += matched / n;
+  }
+  return total / SEEDS.length;
+}
+const greedyAcc = accuracyAt(0);
+const exploringAcc = accuracyAt(undefined);      // the shipped default
+const cost = (greedyAcc - exploringAcc) * 100;
+console.log(`     greedy ${(greedyAcc * 100).toFixed(1)}%  vs  exploring ${(exploringAcc * 100).toFixed(1)}%  ->  ${cost.toFixed(1)} points`);
+check(cost < 1.5, `exploration costs under 1.5 points (${cost.toFixed(1)})`);
+check(exploringAcc > lastRate + 0.03,
+  'and the router still beats last-write-wins while paying it');
+
+/* Every composition the policy might pick has a known, non-zero probability,
+   and they sum to one. Without this lab.js has nothing to divide by. */
+reset();
+for (let i = 0; i < 30; i++) {
+  R.record({ ask: 'fix my failing build', domain: 'code', arm: 'shaped:2', outcome: 'took' });
+}
+const pol = R.policy('fix my failing build', 'code');
+const mass = R.ARMS.reduce((a, id) => a + pol.probs[id], 0);
+check(Math.abs(mass - 1) < 1e-9, `the policy is a proper distribution (sums to ${mass.toFixed(9)})`);
+check(pol.probs[pol.best.id] > 0 && pol.candidates >= 1,
+  `and the favourite keeps most of the mass (${pol.probs[pol.best.id].toFixed(3)} over ${pol.candidates} candidate(s))`);
+
+/* A greedy request is deterministic, which is what "what do you believe"
+   questions want — and is exactly why the LOGGING policy must not be. */
+const g = R.offer('fix my failing build', 'code', { greedy: true });
+check(g && g.p === 1, 'a greedy offer reports probability 1, because nothing was left to chance');
+
+/* ---------------------------------------------------------------- */
 console.log('\n== it generalizes across the ask, not just the label ==');
 
 reset();

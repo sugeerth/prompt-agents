@@ -300,6 +300,66 @@ while the switch is off rather than buffered, and — the upgrade case that is
 easy to miss — that someone who turned learning off *before* this layer existed
 is not silently opted back in by the new key defaulting to on.
 
+## Counterfactuals: what a setting you never shipped would have scored
+
+The router can only tell you about compositions it actually opened on. The
+questions people have about a default are the other kind — *should the
+cold-start default be Guided/Standard or Shaped/Standard? is the router earning
+its place, or would always-take-the-favourite do?* Shipping an experiment for
+each takes weeks and spends real traffic on a setting you already suspect is
+worse.
+
+`lab.js` answers them from traffic you already have. The router logs the
+probability it assigned to what it did, so re-weighting each logged outcome by
+how likely a *different* policy would have been to do the same thing gives an
+unbiased estimate of a policy that was never run. Three estimators, because
+they fail differently — IPS (unbiased, noisy), SNIPS (steadier, and it cannot
+return a reward nobody observed), and doubly robust (right if *either* the
+reward model or the propensities are right).
+
+**It only works because the router randomizes.** Under a deterministic policy
+every alternative was taken with probability zero, the importance weight is a
+division by zero, and no amount of data fixes it. That is what the exploration
+in `router.js` buys, and the first attempt at it was a mistake the eval caught:
+plain epsilon-greedy spread over all seven compositions cost **5 points** of
+accuracy, as much as the whole layer is worth. Confining the randomization to
+compositions the model cannot separate changed the trade completely —
+8 seeds, measured:
+
+```
+MARGIN 0.05   cost 0.5pt   0.7% of decisions off-policy
+MARGIN 0.20   cost 0.5pt   2.3% off-policy        <- shipped
+MARGIN 0.35   cost 1.1pt   4.5% off-policy
+MARGIN 0.60   cost 4.0pt   9.5% off-policy
+```
+
+`tests/lab-eval.js` does not check that the estimates look plausible. It builds
+a world with a known reward table so the exact value of any policy is
+computable, logs under a deliberately mediocre policy, and asks about a better
+one:
+
+```
+truth (computed, not sampled): 0.875
+what the logs averaged:        0.413
+IPS   0.815   SNIPS 0.867   DR 0.846
+```
+
+The 0.46 gap between the logged average and the truth is the mistake you make
+reading logs naively. The estimators close it to within 0.008.
+
+**The part worth stealing is the refusal.** A pooled effective sample size
+lies. Asked what "always Shaped / Deep" would score, this code once reported a
+perfectly healthy ESS of 96 on an estimate that was wrong by 0.36 — because
+the router picks that composition constantly for code asks and almost never for
+cooking ones, so nearly all the evidence came from the half of the world where
+it happens to be good. The mass was real; it was just all in one place, which a
+pooled number cannot see. Support is now measured per context and credibility
+is gated on the worst one, with the weak context named. Wrong-and-flagged is
+recoverable; wrong-and-confident is what gets shipped.
+
+No storage, no DOM, no network, and no third `localStorage` key — a
+counterfactual is a diagnostic you run, not state that accumulates about you.
+
 ## Works with no connection, and installs like an app
 
 The app makes no network calls of any kind once it has loaded — the vocabulary,
@@ -468,7 +528,7 @@ when the structure earns it) → Always → Off.
 `npm test` runs everything; CI (`.github/workflows/eval.yml`) runs it on every
 push and PR.
 
-- `npm run test:eval` — eight scored evals, no browser. The **complexity ladder**
+- `npm run test:eval` — nine scored evals, no browser. The **complexity ladder**
   against a labelled corpus with a confusion matrix, gated on accuracy plus
   three invariants (no reasoning spent on an atomic ask, no scaffold suppresses
   reasoning, spend monotonic in complexity). The **intent recognizer** against a
