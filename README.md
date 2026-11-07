@@ -211,10 +211,11 @@ a small **user vector** over the words you use, decayed so old interests fade
 really reveals: copying or launching a prompt counts fully, picking a suggestion
 counts half, idle typing barely counts at all.
 
-It re-ranks suggestions and restores the Steer/Depth you last endorsed in that
-domain. Two limits keep it honest: the boost is **capped at 0.12 and can never
-cross a match tier**, so an exact prefix match always outranks a merely familiar
-one; and remembered settings apply only until you touch the axes yourself.
+It re-ranks suggestions, and the **learning router** below decides which axes to
+open on. Two limits keep the re-ranking honest: the boost is **capped at 0.12
+and can never cross a match tier**, so an exact prefix match always outranks a
+merely familiar one; and remembered settings apply only until you touch the axes
+yourself.
 
 **Nothing leaves the browser.** No account, no cookie, no analytics, no beacon,
 no third party — one `localStorage` key, an on/off switch, a line saying exactly
@@ -223,6 +224,141 @@ how much is remembered, and a Forget-everything button, all in plain sight.
 API appears anywhere in it. (Cross-site browsing history is not available to a
 web page at all — browsers block it by design — so no honest version of this
 feature can read what you did on other sites, and this one doesn't try.)
+
+## The learning router: the one layer that learns from outcomes
+
+Every other layer in the engine reads the *input*. `intent.js` reads what you
+typed, `reason.js` reads the shape of the ask, `profile.js` reads what you tend
+to be interested in. None of them ever find out whether the prompt they built
+was any good. `router.js` is the one that does, from the only unambiguous signal
+the app has: whether you took the prompt with the axes where they opened, moved
+them first, or walked away.
+
+It replaces a real weakness. `profile.js` remembered the **last** Steer/Depth you
+endorsed in a domain and reopened on that — an estimator with a sample size of
+one. Copy a Deep + Shaped tax prompt once and every future tax ask opened Deep +
+Shaped, even if the nine after it were Standard + Guided, because each
+endorsement overwrote the last. Last-write-wins follows the noise in a person's
+choices by construction.
+
+The router estimates which composition you *settle on most often* for asks that
+read like this one, over the seven compositions the UI can actually express
+(Native collapses to one arm — Depth is not live there). `tests/router-eval.js`
+implements last-write-wins as a baseline and **measures** the difference rather
+than asserting it, against a deliberately stochastic user:
+
+```
+last-write-wins (what profile.js did):  61.3%
+learning router:                        66.7%
+ceiling (always offer the mode):        72.5%
+per-seed gap: 6.4, 3.4, 5.6, 5.8, 3.8, 6.4, 5.8, 6.0
+```
+
++5.4 points of "opened on the setting you actually wanted", winning on all eight
+seeds. If that gap ever closes, the eval fails and this layer should be deleted.
+
+**It is a classifier, not a bandit — and getting that wrong was the bug.** The
+first version scored the arm on screen and, when you dragged elsewhere, scored
+that arm too. But an arm you only ever drag *to* is only ever recorded on the
+occasions it won: the arm on screen absorbs every failure, the dragged-to arm
+absorbs nothing but successes, so it converges on a perfect record, the router
+flips to it, the roles swap, and the two oscillate forever. Scored that way it
+lost to the baseline it exists to beat. The fix was the framing, not the
+constants. A bandit is for when you only learn the payoff of the arm you pulled,
+and that is not this problem — the axes you settle on before copying reveal the
+*full label*. So every arm is scored on every labelled ask, and an arm's mean
+then means something you can read straight off the panel: **how often this was
+the setting you wanted**.
+
+Three more properties, each tested rather than claimed:
+
+- **It refuses.** Below 8 observations `offer()` returns `null` and the app keeps
+  its own default; `leader()` stays `null` while the intervals overlap or any arm
+  is untried. The engine's doctrine is that personalization re-ranks and never
+  decides — a layer that moves a slider has been handed more authority than
+  that, so it has to earn it first and say out loud when it has not.
+- **It generalizes.** Diagonal LinUCB over a 24-bucket hash of the ask's own
+  words, so "debug the failing import in this build" inherits from "fix my
+  failing build" without sharing a domain label. Diagonal, not full: a full
+  covariance matrix per arm is ~40 KB of `localStorage` for a nicety sitting
+  next to a 240-token profile. Diagonal measures **about 2 KB** after a week in
+  one domain and **under 8 KB** at the twelve-domain cap; the eval prints the
+  figure and fails above 12 KB.
+- **It forgets.** The same ~30-day half-life as the profile, so a preference
+  that changes is tracked rather than outvoted by history.
+
+Same privacy architecture and the same enforcement: no network access of any
+kind, one versioned `localStorage` key, bounded size, an off switch that wipes
+rather than hides, and an eval that greps the source and fails if a network API
+ever appears in it.
+
+And because there are now **two** things that remember you behind **one**
+switch, the coupling is a test rather than a convention. `tests/ui-router.js`
+drives the real DOM and asserts that the switch governs both layers, that
+Forget removes both keys rather than blanking them, that records are dropped
+while the switch is off rather than buffered, and — the upgrade case that is
+easy to miss — that someone who turned learning off *before* this layer existed
+is not silently opted back in by the new key defaulting to on.
+
+## Counterfactuals: what a setting you never shipped would have scored
+
+The router can only tell you about compositions it actually opened on. The
+questions people have about a default are the other kind — *should the
+cold-start default be Guided/Standard or Shaped/Standard? is the router earning
+its place, or would always-take-the-favourite do?* Shipping an experiment for
+each takes weeks and spends real traffic on a setting you already suspect is
+worse.
+
+`lab.js` answers them from traffic you already have. The router logs the
+probability it assigned to what it did, so re-weighting each logged outcome by
+how likely a *different* policy would have been to do the same thing gives an
+unbiased estimate of a policy that was never run. Three estimators, because
+they fail differently — IPS (unbiased, noisy), SNIPS (steadier, and it cannot
+return a reward nobody observed), and doubly robust (right if *either* the
+reward model or the propensities are right).
+
+**It only works because the router randomizes.** Under a deterministic policy
+every alternative was taken with probability zero, the importance weight is a
+division by zero, and no amount of data fixes it. That is what the exploration
+in `router.js` buys, and the first attempt at it was a mistake the eval caught:
+plain epsilon-greedy spread over all seven compositions cost **5 points** of
+accuracy, as much as the whole layer is worth. Confining the randomization to
+compositions the model cannot separate changed the trade completely —
+8 seeds, measured:
+
+```
+MARGIN 0.05   cost 0.5pt   0.7% of decisions off-policy
+MARGIN 0.20   cost 0.5pt   2.3% off-policy        <- shipped
+MARGIN 0.35   cost 1.1pt   4.5% off-policy
+MARGIN 0.60   cost 4.0pt   9.5% off-policy
+```
+
+`tests/lab-eval.js` does not check that the estimates look plausible. It builds
+a world with a known reward table so the exact value of any policy is
+computable, logs under a deliberately mediocre policy, and asks about a better
+one:
+
+```
+truth (computed, not sampled): 0.875
+what the logs averaged:        0.413
+IPS   0.815   SNIPS 0.867   DR 0.846
+```
+
+The 0.46 gap between the logged average and the truth is the mistake you make
+reading logs naively. The estimators close it to within 0.008.
+
+**The part worth stealing is the refusal.** A pooled effective sample size
+lies. Asked what "always Shaped / Deep" would score, this code once reported a
+perfectly healthy ESS of 96 on an estimate that was wrong by 0.36 — because
+the router picks that composition constantly for code asks and almost never for
+cooking ones, so nearly all the evidence came from the half of the world where
+it happens to be good. The mass was real; it was just all in one place, which a
+pooled number cannot see. Support is now measured per context and credibility
+is gated on the worst one, with the weak context named. Wrong-and-flagged is
+recoverable; wrong-and-confident is what gets shipped.
+
+No storage, no DOM, no network, and no third `localStorage` key — a
+counterfactual is a diagnostic you run, not state that accumulates about you.
 
 ## Works with no connection, and installs like an app
 
@@ -392,7 +528,7 @@ when the structure earns it) → Always → Off.
 `npm test` runs everything; CI (`.github/workflows/eval.yml`) runs it on every
 push and PR.
 
-- `npm run test:eval` — seven scored evals, no browser. The **complexity ladder**
+- `npm run test:eval` — nine scored evals, no browser. The **complexity ladder**
   against a labelled corpus with a confusion matrix, gated on accuracy plus
   three invariants (no reasoning spent on an atomic ask, no scaffold suppresses
   reasoning, spend monotonic in complexity). The **intent recognizer** against a

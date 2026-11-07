@@ -23,6 +23,10 @@ jobs:
         run: node tests/reasoning-eval.js
       - name: Score intent recognition
         run: node tests/intent-eval.js
+      - name: Learning router beats last-write-wins
+        run: node tests/router-eval.js
+      - name: Off-policy estimators against ground truth
+        run: node tests/lab-eval.js
 
   # Full behaviour: the app is driven in a real browser.
   ui:
@@ -51,3 +55,5 @@ jobs:
         run: node tests/ui-goodhart.js
       - name: Agent harness
         run: node tests/ui-agent.js
+      - name: Learning router in the app (one switch, one Forget)
+        run: node tests/ui-router.js
